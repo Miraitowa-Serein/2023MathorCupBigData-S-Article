@@ -1,0 +1,10 @@
+# dataset path
+train: E:/University/PythonProject/UltralyticsMaster/dataset/images/train
+val: E:/University/PythonProject/UltralyticsMaster/dataset/images/val
+test: E:/University/PythonProject/UltralyticsMaster/dataset/images/test
+
+# number of classes
+nc: 1
+
+# class names
+names: ['potholes']
