@@ -106,7 +106,7 @@
 		\end{tabularx}}
 	\end{center}
 
-	\textbf{注：}这里并未列出其余变量，这是由于它们在不同小节处有不同的含义，同时该表中也未列出专有定义的变量，这些变量在使用时会在相应位置进行详细说明。
+	\textbf{注：}这里并未列出其余变量，这是由于它们在不同小节处有不同的含义，这些符号以及上述符号在使用时仍会在相应位置进行详细说明。
 
 	\section{模型的建立与求解}
 	\subsection{初赛研究相关结论、坑洼特征分析}\label{分析}
@@ -118,7 +118,7 @@
 		\item \textbf{阈值分割}：分析坑洼与正常道路的阈值分割特征。
 	\end{itemize}
 	
-	但由于图片较多，故我们选择“normal133.jpg”及“potholes1.jpg”进行对比分析。以下是具体分析内容，该部分具体处理代码见\textbf{附录-C.11，Comparative Analysis of Normal and Potholes [正常与坑洼道路的比较分析]}。
+	但由于图片较多，故我们选择“normal133.jpg”及“potholes1.jpg”进行对比分析。以下是具体分析内容，该部分具体处理代码见\textbf{附录-C.1，Comparative Analysis of Normal and Potholes [正常与坑洼道路的比较分析]}。
 	\subsubsection{原图、热力图对比}
 	“normal133.jpg”及“potholes1.jpg”原图及热力图对比，如\textcolor{blue}{\cref{fig:原图对比}}及\textcolor{blue}{\cref{fig:热力图对比}}所示\textcolor{blue}{\footnote{本文所有图示、表格均已交叉引用，读者阅读PDF时可点击对应图表，进行跳转。}}。
 	\begin{figure}[H]
@@ -235,9 +235,7 @@
 
   
 	\subsubsection{文件夹分类}
-	为了后续模型的分析、建立与求解，我们将“normal”与“potholes”图像文件置于“DATA”文件下的“normal”及“potholes”文件夹中，作为二分类的数据集。该处理我们使用Python的os及shutil库进行处理，首先指定根目录为“DATA”，再在其下创建“normal”与“potholes”文件夹，之后读取“DATA”文件夹下的所有文件，若文件名中含有“normal”字符，则将其放置于“normal”文件夹中，否则放置于“potholes”文件夹中。具体处理代码见\textbf{附录-C.10，Data Preprocessing [数据预处理]}。
-	
-	这里，我们可以大致观测数据集图像，如\textcolor{blue}{\cref{fig:图像数据观测}}所示。
+	为了后续模型的分析、建立与求解，我们将“normal”与“potholes”图像文件置于“DATA”文件下的“normal”及“potholes”文件夹中，作为二分类的数据集。该处理我们使用Python的os及shutil库进行处理，首先指定根目录为“DATA”，再在其下创建“normal”与“potholes”文件夹，之后读取“DATA”文件夹下的所有文件，若文件名中含有“normal”字符，则将其放置于“normal”文件夹中，否则放置于“potholes”文件夹中。具体处理代码见\textbf{附录-C.2，Data Preprocessing [数据预处理]}。这里，我们可以大致观测数据集图像，如\textcolor{blue}{\cref{fig:图像数据观测}}所示。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.5]{图像数据观测.pdf}
@@ -269,30 +267,95 @@
 	此外，还需要预先读取测试集图像，以防破损文件影响预测过程。这里我们使用ultralytics库，并加上try-except异常处理，将数据加载至内存中，方便后续进行预测。
 	
 	经过读取，发现存在一个文件读取失败，为“guy7iodk.jpg”。因此，对于该张图片，我们对其进行单一读取、处理。而其余的4941张图正常读取，在后续可正常预测。
-	\subsection{图像数据预处理}
-	\subsubsection{opencv读取图像文件}
-	考虑到图像文件较多，为方便后续处理，我们利用Python的opencv及os库，将数据加载至内存中。并分析各类中包含的图像数据个数，如\textcolor{blue}{\cref{tab:数据信息}}所示。这里罗列了原数据集与经过\textcolor{blue}{\nameref{图像文件预处理}}部分处理后的情况，同时还计算出正常道路与坑洼道路数据个数的比值。
+	
+	\subsection{YOLOv8模型简述}
+
+	YOLOv8是Ultralytics公司于2023年1月10日开源的YOLOv5的下一个重大更新版本，目前支持图像分类、物体检测、实例分割、目标追踪、姿态估计任务\textcolor{blue}{\cite{YOLO任务}}。
+
+	YOLOv8是一个SOTA模型，其建立在曾经的版本的基础上引入新的功能，并进行一定改进，从而进一步提升性能与灵活性。具体创新包\textbf{括骨干网络（Backbone Network）}、\textbf{Anchor-Free检测头（Anchor-Free Detection Head）}和\textbf{损失函数（Loss Function）}\textcolor{blue}{\cite{YOLO架构}}，模型结构如\textcolor{blue}{\cref{fig:YOLO架构}}所示\textcolor{blue}{\footnote{该架构图来源于：\url{https://mmyolo.readthedocs.io/en/latest/recommended_topics/algorithm_descriptions/yolov8_description.html}，原作者为RangeKing@github，其Github主页：\url{https://github.com/RangeKing}。}}。
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.14]{YOLOv8架构}
+		\caption{YOLOv8模型架构}
+		\label{fig:YOLO架构}
+	\end{figure}
+	YOLOv8主要可分为Input 输入端、Backbone骨干神经网络、Neck混合特征网络层和Head预测层网络4个部分\textcolor{blue}{\cite{YOLOv8简述}}。
+	
+	\begin{itemize}
+		\item \textbf{Input}：输入端方法包含的功能模块有：\textbf{马赛克（Mosaic）数据增强}、\textbf{自适应锚框（Anchor）计算}、\textbf{自适应图片缩放}和\textbf{Mixup数据增强}\textcolor{blue}{\cite{YOLO数据增强}}。马赛克数据增强通过将4张图像进行随机的缩放、裁剪和打乱分布方式等操作来重新拼接图像，从而丰富检测的数据集。在每次训练数据之前，自适应锚框计算会选择最合适锚框尺寸，自动匹配最佳锚框，并将在目标检测中将两幅图像的像素值按图像透明度的通道信息进行线性融合。
+		\item \textbf{Backbone Network}：骨干网络用来提取图像特征，包括\textbf{注意力（Focus）机制模块}、\textbf{跨阶段局部网络（Cross Stage Partial Network, CSP）}和\textbf{空间金字塔池化（Spatial Pyramid Pooling, SPP）结构}四个模块。先将图片进行切片，再将新得到的图片经过卷积操作，生成没有信息丢失的两倍下的采样特征图。
+		\item \textbf{Neck}：Neck混合特征网络层由卷积层和C2f组成，通过\textbf{路径聚合网络（Path Aggregation Network, PAN）}和\textbf{特征金字塔网络（Feature Pyramid Network, FPN）}的结构对特征进行多尺度融合，将图像特征传递到预测层。
+		\item \textbf{Head}：Head预测层采用\textbf{解耦检测头（Decoupled-Head）}\textcolor{blue}{\cite{Head}}，通过不同的分支进行运算，提升检测效果。
+	\end{itemize}
+
+	\subsection{坑洼特性提取模型的训练}
+	为对坑洼特性进行提取，我们需要建立基于YOLOv8的segment图像分割及YOLOv8的detect图像检测模型，对道路的坑洼特性进行学习、训练。在此之前需要对图像进行标注，标注文件的格式转换，训练集、测试集、验证集三者的划分，对训练集进行数据增强，配置训练文件。待模型训练完成后，再读取迭代过程中最优模型对测试集数据的坑洼边缘进行提取。
+	\subsubsection{图像坑洼标注}
+	首先，需要对图像中的坑洼位置进行标注，对于本文所建立的两个YOLOv8模型，使用不同的标注方法，标注过程示意图如\textcolor{blue}{\cref{fig:图像坑洼标注}}所示。
+	\begin{itemize}
+		\item \textbf{YOLOv8s-Segment}：基于Segment Anything Model的交互式半自动图像分割标注工具（Interactive Semi-automatic Annotation Tool for image segmentation with Segment Anything Model, ISAT-SAM）；
+		\item \textbf{YOLOv8n-Detect}：Labelimg标注。
+	\end{itemize}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{坑洼标注.pdf}
+		\caption{图像坑洼标注}
+		\label{fig:图像坑洼标注}
+	\end{figure}
+
+	两者比较如下：
+	\begin{itemize}
+		\item \textbf{ISAT-SAM}：ISAT-SAM是一种基于SAM的交互式半自动图像分割标注工具，本文所使用的预训练模型为“sam\_hq\_vit\_tiny.pth”。该工具支持手动标注多边形、连点绘制、标注二次修改、重叠目标调整遮挡关系、标注结果预览、单独线程进行Sam Encoder计算，降低切换图片的卡顿感\textcolor{blue}{\cite{ISAT-SAM}}。同时，其相比于其他人工标注方法，采用SAM，大大提升了标注效率，且边缘处理更精准。标注输出格式为JSON文件。
+		\item \textbf{Labelimg}：Labelimg是一个可视化的图像标注工具。其是用Python编写的，并将Qt用于图形界面。批注以PASCAL VOC格式（ImageNet使用的格式）另存为XML文件\textcolor{blue}{\cite{Labelimg}}。其仅可标注矩形，因此多用于图像目标的检测任务。
+	\end{itemize}
+	\subsubsection{标注文件格式转换}
+	由于上述两种标注方法生成的格式分别为JSON文件和XML文件，而YOLOv8模型所需的标注文件格式为TXT文件，因此需要对其进行格式转换。这里我们使用Python进行处理，具体处理代码见\textbf{附录-C.4，isat2txt [ista转txt]}及\textbf{附录-C.5 xml2txt [xml转txt]}。
+
+	这里我们以“potholes22.jpg”为例，原图见\textcolor{blue}{\cref{fig:potholes22}}；两种标注方法转换前与转换后的对比如\textcolor{blue}{\cref{fig:格式转换}}所示。
+	\begin{figure}[H]
+		\centering
+		\begin{minipage}{0.45\linewidth}
+		  \centering
+		  \includegraphics[width=0.7\linewidth]{potholes22}
+		  \caption{“potholes22.jpg”原图}
+		  \label{fig:potholes22}
+		\end{minipage}
+		%qquad
+		\begin{minipage}{0.45\linewidth}
+		  \centering
+		  \includegraphics[width=1.0\linewidth]{格式转换.pdf}
+		  \caption{格式转换前后文件}
+		  \label{fig:格式转换}
+		\end{minipage}
+	\end{figure}
+
+	\subsubsection{划分训练集、测试集、验证集}
+	对于模型的学习，我们需要对数据集进行划分，划分为训练集、测试集以及验证集。
+	\begin{itemize}
+		\item \textbf{训练集}：用于模型的训练；
+		\item \textbf{测试集}：用于对模型性能的评估分析，检验模型效果；
+		\item \textbf{验证集}：用于在训练阶段验证模型训练效果，选择超参数。
+	\end{itemize}
+	
+	对于本文所建立的两个YOLOv8模型，我们设置训练集、测试集、验证集的比例见\textcolor{blue}{\cref{tab:比例设置}}。
 
 \begin{table}[H]
 	\centering
-	\caption{数据信息}
+	\caption{模型训练集、测试集、验证集的划分比例}
 	\scalebox{0.9}{
-	  \begin{tabular}{ccccc}
+	  \begin{tabular}{cccc}
 	  \toprule
-	  \textbf{类别} & \textbf{1：正常道路} & \textbf{0：坑洼道路} & \textbf{正常道路与坑洼道路图像数据个数比值} & \textbf{合计} \\
+	  \textbf{模型名称} & \textbf{训练集} & \textbf{测试集} & \textbf{验证集} \\
 	  \midrule
-	  原数据图像个数 & 266   & 35    & 7.60  & 301 \\
-	  处理后图像个数 & 259   & 41    & 6.32  & 300 \\
+	  YOLOv8n-Detect & 8     & 1     & 1 \\
+	  YOLOv8n-Segment & 7     & 2     & 1 \\
 	  \bottomrule
 	  \end{tabular}}
-	\label{tab:数据信息}
-\end{table}
-	
-	\subsubsection{划分训练集与测试集}
-	对于模型的学习，我们需要对数据集进行划分，划分为训练集与测试集。训练集用于模型的训练，测试集用于对模型性能的评估分析，检验模型效果。由于该数据集样本较少，我们设置训练集占比为$80\,\%$，测试集占比为$20\,\%$，且上述划分为采用Python的sklearn库中model\_selection.train\_test\_split方法及自定义地客观地随机划分。
-
-	\subsubsection{训练集数据增强}
-	观察数据集，发现其特征多数存在相似性；同时，数据集样本较少。因此，为避免模型的过拟合与欠拟合，这里我们需要对训练集进行数据增强\textcolor{blue}{\footnote{\textbf{注意：}这里数据增强是在划分训练集与测试集之后的，并且仅对训练集数据进行增强，并不对测试集进行划分。这是由于，若在划分训练集与测试集之前进行增强，则会造成数据泄露，影响模型的准确性，以及对未知数据的泛化能力。}}。从而增强模型对于未知数据集的泛化能力，提升模型的稳健性。
+	\label{tab:比例设置}
+  \end{table}
+  	具体实现代码见\textbf{附录-C.6，Segment Spilt Data [图像分割数据集划分]}以及\textbf{附录-C.7，Detect Spilt Data [图像检测数据集划分]}。
+	\subsubsection{训练集图像初次增强}
+	观察数据集，发现其特征多数存在相似性；同时，数据集样本较少。因此，为避免模型的过拟合与欠拟合，这里我们需要对训练集进行初步的数据增强\textcolor{blue}{\footnote{\textbf{注意：}这里数据增强是在划分训练集与测试集之后的，并且仅对训练集数据进行增强，并不对测试集进行划分。这是由于，若在划分训练集与测试集之前进行增强，则会造成数据泄露，影响模型的准确性，以及对未知数据的泛化能力。}}。从而增强模型对于未知数据集的泛化能力，提升模型的稳健性。
 
 	这里，我们选用线性滤波中的\textbf{高斯滤波（Gauss Blur）}、非线性滤波中的\textbf{双边滤波（Bilateral Blur）}、以及对图像进行\textbf{顺时针旋转$\boldsymbol{\frac{\pi}{6}}$}处理。
 	\begin{itemize}
@@ -316,7 +379,7 @@
 			\item $F_f\left[ I\left( X,Y \right) ,I\left( X+i,Y+j \right) \right]$：像素值域核函数。
 		\end{itemize}
 	\end{itemize}
-\newpage
+	
 	这里，我们随机选择一张图片，将其经过上述处理后的图像一一展示，如\textcolor{blue}{\cref{fig:原图高斯双边滤波及旋转对比}}所示。经过上述处理后，在一定程度上可以增加训练集数据的多样性，从而模型可以学习到更多关于正常或坑洼道路的特征，因而有利于提升模型的泛化能力。
 	\begin{figure}[H]
 		\centering
@@ -325,15 +388,30 @@
 		\label{fig:原图高斯双边滤波及旋转对比}
 	\end{figure}
 
-	经过上述滤波及旋转处理后，意味着将训练集增加3倍，即现有训练集为$681\times 0.8\times 4=2179$张图像。这里，我们将随机选择10张图像进行展示，如\textcolor{blue}{\cref{fig:数据增强}}所示。
-	\begin{figure}[H]
-		\centering
-		\includegraphics[scale=0.6]{PCA-SVM训练样本.pdf}
-		\caption{数据增强图像}
-		\label{fig:数据增强}
-	\end{figure}
-	\subsection{坑洼特性提取模型的训练}
-	\subsubsection{1}
+	\subsubsection{训练文件配置}
+	至此，我们还需要预训练模型，这里我们选用YOLOv8s-seg及YOLO8n分别作为图像分割及图像检测的基础模型，命名为YOLOv8-Segment及YOLOav8-Detect。此外，我们还需要配置训练文件，主要配置文件见\textcolor{blue}{\cref{tab:配置文件}}。
+
+\begin{table}[htbp]
+	\centering
+	\caption{模型配置文件}
+	\scalebox{0.9}{
+	  \begin{tabular}{cc}
+	  \toprule
+	  \textbf{模型名称} & \textbf{配置文件} \\
+	  \midrule
+	  YOLOv8-Segment & segment.yaml与yolov8-seg.yaml \\
+	  YOLOv8-Detect & detect.yaml \\
+	  \bottomrule
+	  \end{tabular}}
+	\label{tab:配置文件}
+  \end{table}
+  
+	\subsubsection{模型的训练}
+	\begin{itemize}
+		\item \textbf{YOLOv8s-Segment}
+		
+		\item \textbf{YOLOv8n-Detect}
+	\end{itemize}
 	\subsection{测试集图像坑洼特性预测}
 
 	\subsection{模型的评估}
@@ -398,156 +476,6 @@
 		\item \textbf{交叉验证（Cross Validation）}：在该方法中，每一条数据用于训练的次数均相同，且恰好被检验一次。假设使用$k(k=2,3,4,\cdots)$折交叉验证，将数据分为大小相等的$k$份，在每一次学习时，选择其中一份作为检验集，而余下的数据作为训练集，上述过程重复$k$次。此外，检验集是互斥的，并且能够有效地覆盖数据集\textcolor{blue}{\cite{数据挖掘导论}}。
 	\end{itemize}
 
-	\subsubsection{三种模型的效果逐一分析}\label{模型效果}
-	\begin{itemize}
-		\item \textbf{PCA-SVM}
-
-		通过查看Jupyter的代码执行记录：PCA模型在训练集训练耗时$50\,\text{s}+281\,\text{ms}$，在测试集适应耗时$2\,\text{s}+968\,\text{ms}$；SVM模型网格调优耗时$9\,\text{s}+948\,\text{ms}$，在训练集训练及在测试集测试共耗时$185\,\text{ms}$。通过在测试集的测试，经计算，该模型准确率为：$86.67\,\%$。此外，我们还得出其分类报告表，如\textcolor{blue}{\cref{tab:PCA-SVM分类报告表}}所示。
-\begin{table}[htbp]
-	\centering
-	\caption{PCA-SVM分类报告表}
-	\scalebox{0.9}{
-	  \begin{tabular}{ccccc}
-	  \toprule
-	  \textbf{维度} & \textbf{precision} & \textbf{recall} & \textbf{f1-score} & \textbf{support} \\
-	  \midrule
-	  0：potholes & 0.50  & 0.25  & 0.33  & 8 \\
-	  1：normal & 0.89  & 0.96  & 0.93  & 52 \\
-	  accuracy &       &       & 0.87  & 60 \\
-	  marco avg & 0.70  & 0.61  & 0.63  & 60 \\
-	  weighted avg & 0.84  & 0.87  & 0.85  & 60 \\
-	  \bottomrule
-	  \end{tabular}}
-	\label{tab:PCA-SVM分类报告表}
-\end{table}
-	观察上表，我们可以发现由于该模型尚未采用采样方法扩充数据集，虽然整体准确率较高，但对于各类别有明显的不平衡性。此外，该模型对于坑洼类别的精确率、召回率、F1分数值均较低，即说明该模型效果较为一般。
-		\item \textbf{CNN}
-		
-		通过查看Jupyter的代码执行记录：CNN模型在训练集训练$50$轮耗时$5\,\text{m}+26\,\text{s}+888\,\text{ms}$，在测试集测试耗时$435\,\text{ms}$。通过在测试集的测试，经计算，该模型准确率为：$88.97\,\%$。此外，我们还得出其分类报告表，如\textcolor{blue}{\cref{tab:CNN分类报告表}}所示。
-\begin{table}[htbp]
-	\centering
-	\caption{CNN分类报告表}
-	\scalebox{0.9}{
-	  \begin{tabular}{ccccc}
-	  \toprule
-	  \textbf{维度} & \textbf{precision} & \textbf{recall} & \textbf{f1-score} & \textbf{support} \\
-	  \midrule
-	  0：potholes & 0.90  & 0.88  & 0.89  & 68 \\
-	  1：normal & 0.88  & 0.90  & 0.89  & 68 \\
-	  accuracy &       &       & 0.89  & 136 \\
-	  marco avg & 0.89  & 0.89  & 0.89  & 136 \\
-	  weighted avg & 0.89  & 0.89  & 0.89  & 136 \\
-	  \bottomrule
-	  \end{tabular}}
-	\label{tab:CNN分类报告表}
-\end{table}
-
-	观察该表，我们可以发现，该模型在新数据集上表现效果较优秀，各项指标均较为理想。此外，我们还绘制其在训练过程中在训练集及测试集上的准确率与损失值，如\textcolor{blue}{\cref{fig:CNN训练结果}}所示。通过观察该图，我们可以发现，随着迭代次数的增加，训练集上的准确率平稳而缓慢增加，测试集上的准确度经过起伏后也为上升趋势。而随着迭代次数增加，其训练集上的损失逐渐减少，而在测试集上其损失呈波动性，这可能是由于数据集过少，即缺乏代表性样本\textcolor{blue}{\cite{数据挖掘导论}}，易造成过拟合。
-
-	\begin{figure}[H]
-		\centering
-		\includegraphics[scale=0.65]{CNN训练结果.pdf}
-		\caption{CNN训练结果}
-		\label{fig:CNN训练结果}
-	\end{figure}
-		\item \textbf{CNN-SVM}
-		
-		CNN模型训练耗时$5\,\text{m}+26\,\text{s}+888\,\text{ms}$，提取图像特征耗时$482\,\text{ms}$；SVM分类器在所提取的特征上训练耗时$48\,\text{ms}$，在测试集上得出结果耗时$28\,\text{ms}$。通过在测试集的测试，经计算，该模型准确率为：$90\,\%$。该模型分类报告表如\textcolor{blue}{\cref{tab:CNN-SVM分类报告表}}所示。此外，为了方便查看，我们还绘制其分类报告图，如\textcolor{blue}{\cref{fig:CNN-SVM分类报告图}}所示。观察其分类报告，我们可以发现，该模型无论是对于正常或者是坑洼道路，其均能较好地识别，精度较高，并且召回率与F1分数值均较优秀。
-\begin{table}[htbp]
-	\centering
-	\caption{CNN-SVM分类报告表}
-	\scalebox{0.9}{
-	  \begin{tabular}{ccccc}
-	  \toprule
-	  \textbf{维度} & \textbf{precision} & \textbf{recall} & \textbf{f1-score} & \textbf{support} \\
-	  \midrule
-	  0：potholes & 0.89  & 0.93  & 0.91  & 68 \\
-	  1：normal & 0.92  & 0.88  & 0.90  & 68 \\
-	  accuracy &       &       & 0.90  & 136 \\
-	  marco avg & 0.91  & 0.90  & 0.90  & 136 \\
-	  weighted avg & 0.91  & 0.90  & 0.90  & 136 \\
-	  \bottomrule
-	  \end{tabular}}
-	\label{tab:CNN-SVM分类报告表}
-  \end{table}
-
-  	此外我们还根据模型在测试集上的预测结果与实际真实值进行比较，绘制出模型的混淆矩阵热力图，如\textcolor{blue}{\cref{fig:CNN-SVM混淆矩阵热力图}}所示。观察该图，我们可以发现：对于坑洼道路检测中，有$63$张图像的检测结果为坑洼，$5$张的检测结果为正常，即在$68$张图片为坑洼道路的图像中，识别正确的为$63$张，正确率达到$92.48\,\%$；对于正常道路的检测中，有$60$张图像的检测结果为正常，$8$张图像的检测结果为坑洼，即在$68$张为正常的道路图片中，识别正确的有$60$张，正确率为$88.24\,\%$，由此可见，此模型的效果较好。
-
-\begin{figure}[H]
-	\centering
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\includegraphics[width=0.96\linewidth]{[CNN-SVC]分类报告.pdf}
-		\caption{CNN-SVM分类报告图}
-		\label{fig:CNN-SVM分类报告图}
-	\end{minipage}
-	%\qquad
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\includegraphics[width=0.96\linewidth]{[CNN-SVC]混淆矩阵热力图.pdf}
-		\caption{CNN-SVM混淆矩阵热力图}
-		\label{fig:CNN-SVM混淆矩阵热力图}
-	\end{minipage}
-\end{figure}
-
-同时，我们还绘制模型的ROC/AUC曲线以及精确率-召回率曲线，分别如\textcolor{blue}{\cref{fig:CNN-SVM ROC/AUC曲线}}与\textcolor{blue}{\cref{fig:CNN-SVM精确率召回率曲线}}所示。由图可知，该模型的ROC/AUC曲线主要分布在左上方，曲线下面积较大，即AUC值较高，为$0.90$；同时，该模型的精确率与召回率都位于较高的数值，说明该模型在对道路是否坑洼的识别上准确度高，模型效果较好。
-
-\begin{figure}[H]
-	\centering
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\includegraphics[width=0.96\linewidth]{[CNN-SVC]ROC曲线.pdf}
-		\caption{CNN-SVM\,ROC曲线}
-		\label{fig:CNN-SVM ROC/AUC曲线}
-	\end{minipage}
-	%\qquad
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\includegraphics[width=0.96\linewidth]{[CNN-SVC]精确率召回率曲线.pdf}
-		\caption{CNN-SVM精确率-召回率曲线}
-		\label{fig:CNN-SVM精确率召回率曲线}
-	\end{minipage}
-\end{figure}
-	\end{itemize}
-
-	此外，我们还对该模型进行了五折交叉验证，具体结果为：
-	\begin{equation}
-		\boldsymbol{[0.96428571, 0.88888889, 0.88888889,0.85185185, 0.92592593]}\nonumber
-	\end{equation}
-	因而，可以得到该模型的准确率在置信度为$95\,\%$的水平下，置信区间为$\left[82\,\%, 98\,\%\right]$。
-	\subsubsection{模型对比}
-	未选择最优模型，我们依据\textcolor{blue}{\nameref{模型效果}}部分，将各模型指标整理至一张表格中，如\textcolor{blue}{\cref{tab:模型效果对比}}所示。同时结合\textcolor{blue}{\cref{fig:CNN-SVM分类报告图}}\textasciitilde\textcolor{blue}{\cref{fig:CNN-SVM精确率召回率曲线}}，我们可以发现，在三者中，CNN-SVM模型的效果最优，其各项指标均较优秀。
-
-\begin{table}[htbp]
-	\centering
-	\caption{模型效果对比}
-	\scalebox{0.9}{
-	  \begin{tabular}{ccccc}
-	  \toprule
-	  \textbf{指标} & \textbf{计算维度} & \textbf{PCA-SVM} & \textbf{CNN} & \textbf{CNN-SVM} \\
-	  \midrule
-	  \multirow{4}[2]{*}{\textbf{precision}} & 0：potholes & 0.50  & \textbf{0.90 } & 0.89  \\
-			& 1：normal & 0.89  & 0.88  & \textbf{0.92 } \\
-			& macro & 0.70  & 0.89  & \textbf{0.91 } \\
-			& weighted & 0.84  & 0.89  & \textbf{0.91 } \\
-	  \midrule
-	  \multirow{4}[2]{*}{\textbf{recall}} & 0：potholes & 0.25  & 0.88  & \textbf{0.93 } \\
-			& 1：normal & \textbf{0.96 } & 0.90  & 0.88  \\
-			& macro & 0.61  & 0.89  & \textbf{0.90 } \\
-			& weighted & 0.87  & 0.89  & \textbf{0.90 } \\
-	  \midrule
-	  \multirow{4}[2]{*}{\textbf{f1-score}} & 0：potholes & 0.33  & 0.89  & \textbf{0.91 } \\
-			& 1：normal & \textbf{0.93 } & 0.89  & 0.90  \\
-			& macro & 0.63  & 0.89  & \textbf{0.90 } \\
-			& weighted & 0.85  & 0.89  & \textbf{0.90 } \\
-	  \midrule
-	  \textbf{accuracy} & 整体    & 0.87  & 0.89  & \textbf{0.90 } \\
-	  \midrule
-	  $\boldsymbol{T}$     & 共计    & 6\,m 8\,s 197\,ms & \textbf{5\,m 27\,s 323\,ms} & 6\,m 15\,s 37\,ms \\
-	  \bottomrule
-	  \end{tabular}}
-	\label{tab:模型效果对比}
-\end{table}
 
 	\subsection{未知数据集的预测}
 	对于该问题，具体处理代码见\textbf{附录-C.7，Predict [预测]}。我们按以下步骤进行处理：
@@ -612,7 +540,22 @@
 	\addcontentsline{toc}{section}{\textbf{参考文献}}
 	\begin{spacing}{1.08}
 	\begin{thebibliography}{99}
+	\bibitem{YOLO任务}知乎.用YOLOv8一站式解决图像分类、检测、分割[EB/OL].\url{https://zhuanlan.zhihu.com/p/655889189}.
+
+	\bibitem{YOLO架构}MMYOLO.Algorithm principles and implementation with YOLOv8 — MMYOLO 0.6.0 documentation[EB/OL].\url{https://mmyolo.readthedocs.io/en/latest/recommended_topics/algorithm_descriptions/yolov8_description.html}.
+
+	\bibitem{YOLOv8简述}刘瑞锦,何章鸣.基于YOLOv8的卫星遥感图像快速目标检测方法[J].空间控制技术与应用,2023,49(05):89-97.
+
+	\bibitem{YOLO数据增强}Zhang H, Cisse M, Dauphin Y N, et al. mixup: Beyond empirical risk minimization[J]. arXiv preprint arXiv:1710.09412, 2017.
+
 	\bibitem{曹江华}曹江华. 复杂背景下非结构化道路可行驶区域检测研究[D].浙江科技学院,2021.
+
+	\bibitem{Head}Song G, Liu Y, Wang X. Revisiting the sibling head in object detector[C]//Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. 2020: 11563-11572.
+
+	\bibitem{ISAT-SAM}Github.yatengLG/ISAT\_with\_segment\_anything: Labeling tool by SAM(segment anything model),supports SAM, sam-hq, MobileSAM etc.交互式半自动图像标注工具[EB/OL].\url{https://github.com/yatengLG/ISAT_with_segment_anything}.
+
+	\bibitem{Labelimg}知乎.【教程】标注工具Labelimg的安装与使用[EB/OL].\url{https://zhuanlan.zhihu.com/p/550021453}.
+
 
 	\bibitem{刘建新}刘建新,史志仙.概率论与数理统计[M].北京:高等教育出版社,2016:115.
 
@@ -710,7 +653,7 @@
 		\item Windows 10 家庭中文版 22H2
 	\end{itemize}
 
-	\textbf{Python环境下所用使用到的库及其版本}
+	\textbf{B.3 Python环境下所用使用到的库及其版本}
 \begin{table}[htbp]
 	\centering
 	\setlength{\aboverulesep}{0pt}
@@ -744,672 +687,7 @@
 	% \section*{[D]问题解决源程序}
 \noindent{\heiti [C]问题解决源程序}
 
-\textbf{C.1 ista2txt [ista转txt]}
-\begin{python}
-import json
-import os
-import shutil
-
-category_mapping = {"potholes": 0}
-# ISAT格式的实例分割标注文件
-ISAT_FOLDER = "./annotations"
-# YOLO格式的实例分割标注文件
-YOLO_FOLDER = "./labels"
-
-# 创建YoloV8标注的文件夹
-if not os.path.exists(YOLO_FOLDER):
-    os.makedirs(YOLO_FOLDER)
-
-
-# 载入所有的ISAT的JSON文件
-for filename in os.listdir(ISAT_FOLDER):
-    if not filename.endswith(".json"):
-        # 不是json格式, 跳过
-        continue
-    # 载入ISAT的JSON文件
-    with open(os.path.join(ISAT_FOLDER, filename), "r") as f:
-        isat = json.load(f)
-    # 提取文件名(不带文件后缀)
-    image_name = filename.split(".")[0]
-    # Yolo格式的标注文件名, 后缀是txt
-    yolo_filename = f"{image_name}.txt"
-    # 写入信息
-    with open(os.path.join(YOLO_FOLDER, yolo_filename), "w") as f:
-        # 获取图像信息
-        # - 图像宽度
-
-        image_width = isat["info"]["width"]
-
-        # try:
-        #     image_width = isat["info"]["width"]
-        # except KeyError:
-        #     break
-        # - 图像高度
-        image_height = isat["info"]["height"]
-        # 获取实例标注数据
-        for annotation in isat["objects"]:
-            # 获取类别名称
-            category_name = annotation["category"]
-            # 如果不在类别名称字典里面，跳过
-            if category_name not in category_mapping:
-                continue
-            # 从字典里面查询类别ID
-            category_id = category_mapping[category_name]
-            # 提取分割信息
-            segmentation = annotation["segmentation"]
-            segmentation_yolo = []
-            # 遍历所有的轮廓点
-            for segment in segmentation:
-                # 提取轮廓点的像素坐标 x, y
-                x, y = segment
-                # 归一化处理
-                x_center = x/image_width
-                y_center = y/image_height
-                # 添加到segmentation_yolo里面
-                segmentation_yolo.append(f"{x_center:.4f} {y_center:.4f}")
-            segmentation_yolo_str = " ".join(segmentation_yolo)
-            # 添加一行Yolo格式的实例分割数据
-            # 格式如下: class_id x1 y1 x2 y2 ... xn yn\n
-            f.write(f"{category_id} {segmentation_yolo_str}\n")
-\end{python}
-
-\textbf{C.2 xml2txt [xml转txt]}
-\begin{python}
-import xml.etree.ElementTree as ET
-import os, cv2
-import numpy as np
-from os import listdir
-from os.path import join
-
-#将给定的XML格式的标注文件转换为YOLOv8所需的TXT格式，并记录数据集中的类别信息
-classes = []
-
-def convert(size, box):
-    dw = 1. / (size[0])
-    dh = 1. / (size[1])
-    x = (box[0] + box[1]) / 2.0 - 1
-    y = (box[2] + box[3]) / 2.0 - 1
-    w = box[1] - box[0]
-    h = box[3] - box[2]
-    x = x * dw
-    w = w * dw
-    y = y * dh
-    h = h * dh
-    return (x, y, w, h)
-
-
-def convert_annotation(xmlpath, xmlname):
-    with open(xmlpath, "r", encoding='utf-8') as in_file:
-        txtname = xmlname[:-4] + '.txt'
-        txtfile = os.path.join(txtpath, txtname)
-        tree = ET.parse(in_file)
-        root = tree.getroot()
-        filename = root.find('filename')
-        img = cv2.imdecode(np.fromfile('{}/{}.{}'.format(imgpath, xmlname[:-4], postfix), np.uint8), cv2.IMREAD_COLOR)
-        h, w = img.shape[:2]
-        res = []
-        for obj in root.iter('object'):
-            cls = obj.find('name').text
-            if cls not in classes:
-                classes.append(cls)
-            cls_id = classes.index(cls)
-            xmlbox = obj.find('bndbox')
-            b = (float(xmlbox.find('xmin').text), float(xmlbox.find('xmax').text), float(xmlbox.find('ymin').text),
-                 float(xmlbox.find('ymax').text))
-            bb = convert((w, h), b)
-            res.append(str(cls_id) + " " + " ".join([str(a) for a in bb]))
-        if len(res) != 0:
-            with open(txtfile, 'w+') as f:
-                f.write('\n'.join(res))
-
-
-if __name__ == "__main__":
-    postfix = 'jpg'
-    imgpath = 'VOCdevkit/JPEGImages'
-    xmlpath = 'VOCdevkit/Annotations'
-    txtpath = 'VOCdevkit/txt'
-    
-    if not os.path.exists(txtpath):
-        os.makedirs(txtpath, exist_ok=True)
-    
-    list = os.listdir(xmlpath)
-    error_file_list = []
-    for i in range(0, len(list)):
-        try:
-            path = os.path.join(xmlpath, list[i])
-            if ('.xml' in path) or ('.XML' in path):
-                convert_annotation(path, list[i])
-                print(f'file {list[i]} convert success.')
-            else:
-                print(f'file {list[i]} is not xml format.')
-        except Exception as e:
-            print(f'file {list[i]} convert error.')
-            print(f'error message:\n{e}')
-            error_file_list.append(list[i])
-    print(f'this file convert failure\n{error_file_list}')
-    print(f'Dataset Classes:{classes}')
-\end{python}
-
-\textbf{C.3 Segment Spilt Data [图像分割数据集划分]}
-\begin{python}
-import os
-import random
-from tqdm import tqdm
-
-# 指定 images 文件夹路径
-image_dir = "./images"
-# 指定 labels 文件夹路径
-label_dir = "./labels"
-# 创建一个空列表来存储有效图片的路径
-valid_images = []
-# 创建一个空列表来存储有效 label 的路径
-valid_labels = []
-
-# 遍历 images 文件夹下的所有图片
-for image_name in os.listdir(image_dir):
-    # 获取图片的完整路径
-    image_path = os.path.join(image_dir, image_name)
-    # 获取图片文件的扩展名
-    ext = os.path.splitext(image_name)[-1]
-    # 根据扩展名替换成对应的 label 文件名
-    label_name = image_name.replace(ext, ".txt")
-    # 获取对应 label 的完整路径
-    label_path = os.path.join(label_dir, label_name)
-    # 判断 label 是否存在
-    if not os.path.exists(label_path):
-        # 删除图片
-        os.remove(image_path)
-        print("deleted:", image_path)
-    else:
-        # 将图片路径添加到列表中
-        valid_images.append(image_path)
-        # 将label路径添加到列表中
-        valid_labels.append(label_path)
-        # print("valid:", image_path, label_path)
-# 遍历每个有效图片路径
-for i in tqdm(range(len(valid_images))):
-    image_path = valid_images[i]
-    label_path = valid_labels[i]
-    # 随机生成一个概率
-    r = random.random()
-    # 判断图片应该移动到哪个文件夹
-    # train：valid：test = 7:2:1
-    if r < 0.1:
-        # 移动到 test 文件夹
-        destination = "./datasets/test"
-    elif r < 0.3:
-        # 移动到 valid 文件夹
-        destination = "./datasets/valid"
-    else:
-        # 移动到 train 文件夹
-        destination = "./datasets/train"
-    # 生成目标文件夹中图片的新路径
-    image_destination_path = os.path.join(destination, "images", os.path.basename(image_path))
-    # 移动图片到目标文件夹
-    os.rename(image_path, image_destination_path)
-    # 生成目标文件夹中 label 的新路径
-    label_destination_path = os.path.join(destination, "labels", os.path.basename(label_path))
-    # 移动 label 到目标文件夹
-    os.rename(label_path, label_destination_path)
-print("valid images:", valid_images)
-# 输出有效label路径列表
-print("valid labels:", valid_labels)
-\end{python}
-
-\textbf{C.4 Detect Spilt Data [图像检测数据集划分]}
-\begin{python}
-import os, shutil
-from sklearn.model_selection import train_test_split
-
-# 用于将图像和标注文件按照一定比例划分为训练集、验证集和测试集，并将它们分别复制到相应的文件夹中
-val_size = 0.1
-test_size = 0.1
-postfix = 'jpg'
-imgpath = 'VOCdevkit/JPEGImages'
-txtpath = 'VOCdevkit/txt'
-
-os.makedirs('images/train', exist_ok=True)
-os.makedirs('images/val', exist_ok=True)
-os.makedirs('images/test', exist_ok=True)
-os.makedirs('labels/train', exist_ok=True)
-os.makedirs('labels/val', exist_ok=True)
-os.makedirs('labels/test', exist_ok=True)
-
-listdir = [i for i in os.listdir(txtpath) if 'txt' in i]
-train, test = train_test_split(listdir, test_size=test_size, shuffle=True, random_state=0)
-train, val = train_test_split(train, test_size=val_size, shuffle=True, random_state=0)
-print(f'train set size:{len(train)} val set size:{len(val)} test set size:{len(test)}')
-
-for i in train:
-    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/train/{}.{}'.format(i[:-4], postfix))
-    shutil.copy('{}/{}'.format(txtpath, i), 'labels/train/{}'.format(i))
-
-for i in val:
-    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/val/{}.{}'.format(i[:-4], postfix))
-    shutil.copy('{}/{}'.format(txtpath, i), 'labels/val/{}'.format(i))
-
-for i in test:
-    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/test/{}.{}'.format(i[:-4], postfix))
-    shutil.copy('{}/{}'.format(txtpath, i), 'labels/test/{}'.format(i))
-\end{python}
-
-\textbf{C.5 YOLOv8s Segment [YOLOv8s图像分割]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-from ultralytics import YOLO
-
-# In[3]:
-
-
-model = YOLO('yolov8s-seg.pt')
-results = model.train(data="dataset/VOCdevkit/datasets/potholes.yaml", epochs=300, device='cpu')
-
-# In[2]:
-
-
-model = YOLO('potholesSegment.pt')
-
-# In[3]:
-
-
-resultOne = model('potholes\\part1', save=True)
-
-# In[4]:
-
-
-resultTwo = model('potholes\\part2', save=True)
-
-# In[5]:
-
-
-resultThree = model('potholes\\part3', save=True)
-
-# In[3]:
-
-
-resultFour = model('potholes\\part4', save=True)
-
-# In[4]:
-
-
-resultFive = model('potholes\\part5', save=True)
-
-# In[3]:
-
-
-resultSix = model('potholes\\part6', save=True)
-
-# In[4]:
-
-
-resultSeven = model('potholes\\part7', save=True)
-
-# In[3]:
-
-
-resultEight = model('potholes\\part8', save=True)
-\end{python}
-
-\textbf{C.6 YOLOv8n Detect [YOLOv8n图像检测]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-from ultralytics import YOLO
-
-
-# In[47]:
-
-
-model = YOLO("potholesDetect.pt")
-resultsOne = model.predict(source="potholes\\partOne", save=True, save_conf=True, save_txt=True,imgsz=416)
-
-
-# In[48]:
-
-
-model = YOLO("potholesDetect.pt")
-resultsTwo = model.predict(source="potholes\\partTwo", save=True, save_conf=True, save_txt=True,imgsz=416)
-\end{python}
-
-\textbf{C.7 Coordinate Transformation [坐标转换]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import os
-import cv2
-import torch
-import numpy as np
-
-# In[2]:
-
-
-label_path = 'potholes\labels'
-image_path = 'potholes\images'
-
-
-def xywhn2xyxy(x, w=416, h=416, padw=0, padh=0):
-    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
-    y[:, 0] = w * (x[:, 0] - x[:, 2] / 2) + padw  # top left x
-    y[:, 1] = h * (x[:, 1] - x[:, 3] / 2) + padh  # top left y
-    y[:, 2] = w * (x[:, 0] + x[:, 2] / 2) + padw  # bottom right x
-    y[:, 3] = h * (x[:, 1] + x[:, 3] / 2) + padh  # bottom right y
-    return y
-
-
-folder = os.path.exists('potholes\\labelsNew')
-if not folder:
-    os.makedirs('potholes\\labelsNew')
-
-folderlist = os.listdir(label_path)
-for i in folderlist:
-    label_path_new = os.path.join(label_path, i)
-    with open(label_path_new, 'r') as f:
-        lb = np.array([x.split() for x in f.read().strip().splitlines()], dtype=np.float32)  # labels
-        print(lb)
-    read_label = label_path_new.replace(".txt", ".jpg")
-    read_label_path = read_label.replace(label_path, image_path)
-    print(read_label_path, "ddd")
-    img = cv2.imread(str(read_label_path))
-    h, w = img.shape[:2]
-    lb[:, 1:] = xywhn2xyxy(lb[:, 1:], w, h, 0, 0)
-
-    for _, x in enumerate(lb):
-        class_label = int(x[0])
-
-        with open('potholes\\labelsNew\\' + i, 'a') as fw:
-            fw.write(str(int(x[0])) + ' ' + str(x[5]) + ' ' + str(x[1]) + ' ' + str(x[2]) + ' ' + str(x[3]) + ' ' + str(
-                x[4]) + '\n')
-\end{python}
-
-\textbf{C.8 Proportional Calculation [面积占比估算]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import os
-import cv2
-import numpy as np
-import pandas as pd
-
-# In[2]:
-
-
-labelsList = os.listdir('potholes\\labelsNew')
-imagesList = os.listdir('potholes\\images')
-
-# In[3]:
-
-
-labelsDf = pd.DataFrame(labelsList, columns=['fnames'])
-labelsDf
-
-# In[4]:
-
-
-Npotholes = pd.read_csv('potholes\\detectResults.txt', sep=' ', header=None)
-Npotholes = Npotholes.drop([0, 1, 3, 5, 6], axis=1)
-Npotholes.columns = ['fnames', 'Npotholes']
-Npotholes['fnames'] = Npotholes['fnames'].str.split('\\').str[-1]
-Npotholes['Npotholes'] = Npotholes['Npotholes'].str.replace('(', '')
-Npotholes['fnames'] = Npotholes['fnames'].str.replace(':', '')
-Npotholes
-
-# In[5]:
-
-
-Npotholes['Npotholes'] = Npotholes['Npotholes'].str.replace('no', '0')
-Npotholes['Npotholes'] = Npotholes['Npotholes'].astype('int')
-Npotholes
-
-# In[6]:
-
-
-data = pd.DataFrame(columns=['Type', '置信度', 'x1', 'y1', 'x2', 'y2', 'fnames'])
-data
-
-# In[7]:
-
-
-for i in labelsList:
-    with open('potholes\\labelsNew\\' + i, 'r') as f:
-        content = f.readlines()
-        lb = np.array([x.strip().split() for x in content], dtype=np.float32)  # labels
-        lb = pd.DataFrame(lb, columns=['Type', '置信度', 'x1', 'y1', 'x2', 'y2'])
-        lb['fnames'] = i
-
-    data = data._append(lb, ignore_index=True)
-
-data
-
-# In[8]:
-
-
-data = data.drop('Type', axis=1)
-data = data[['fnames', '置信度', 'x1', 'y1', 'x2', 'y2']]
-data['fnames'] = data['fnames'].str.replace('.txt', '.jpg')
-data
-
-# In[9]:
-
-
-data = pd.merge(data, Npotholes, on='fnames', how='right')
-data
-
-# In[10]:
-
-
-potholesImages = pd.DataFrame(imagesList, columns=['fnames'])
-potholesImages
-
-# In[11]:
-
-
-for i in imagesList:
-    img = cv2.imread('potholes\\images\\' + i)
-    height, width, channels = img.shape
-    potholesImages.loc[potholesImages['fnames'] == i, 'height'] = height
-    potholesImages.loc[potholesImages['fnames'] == i, 'width'] = width
-
-potholesImages
-
-# In[12]:
-
-
-data = pd.merge(data, potholesImages, on='fnames', how='left')
-data
-
-# In[13]:
-
-
-data['S'] = data['height'] * data['width']
-data['X'] = data['x2'] - data['x1']
-data['Y'] = data['y2'] - data['y1']
-data['Spotholes'] = data['X'] * data['Y']
-data['Spotholes/S'] = data['Spotholes'] / data['S'] * 100
-data
-
-# In[14]:
-
-
-data['Spotholes/S'] = data['Spotholes/S'].fillna(data['Spotholes/S'].mean())
-data['Spotholes/S'] = data['Spotholes/S'].apply(np.ceil)
-data['Spotholes/S'] = data['Spotholes/S'].astype('int')
-data
-
-# In[15]:
-
-
-dataNew = data.groupby('fnames').apply(lambda x: x.loc[x['Spotholes/S'].idxmax()])
-dataNew
-
-# In[16]:
-
-
-dataNew = dataNew.reset_index(drop=True)
-dataNew
-
-# In[17]:
-
-
-dataR = pd.read_csv('未知数据集预测效果.csv')
-dataR = dataR.drop(['imgType', 'label', 'isTrue'], axis=1)
-dataR
-
-# In[18]:
-
-
-Results = pd.merge(dataR, dataNew, on='fnames', how='left')
-Results
-
-# In[19]:
-
-
-# 修改guy7iodk.jpg行，height=1587，width=1200，S=1587*1200=1904400，Spotholes=954792，Spotholes/S=50
-Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'height'] = 1587
-Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'width'] = 1200
-Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'S'] = 1904400
-Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'Spotholes'] = 954792
-Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'Spotholes/S'] = 50
-Results
-
-# In[20]:
-
-
-Results.loc[Results['imgClass'] == 'normal', 'Spotholes/S'] = 0
-Results
-
-# In[21]:
-
-
-Results['Spotholes/S'] = Results['Spotholes/S'].astype('int')
-Results
-
-# In[22]:
-
-
-Results.to_csv('SpotholesS.csv', index=False)
-\end{python}
-
-\textbf{C.9 Detect Segment Analyze [图像检测与图像分割效果分析]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import pandas as pd
-
-dataDetect = pd.read_csv('detectResults.txt', sep=' ', header=None)
-dataSegment = pd.read_csv('segmentResults.txt', sep=' ', header=None)
-
-# In[2]:
-
-
-dataDetect = dataDetect.drop([0, 1, 3, 5, 6], axis=1)
-dataDetect.columns = ['fnames', 'Detect-Npotholes']
-dataDetect['fnames'] = dataDetect['fnames'].str.split('\\').str[-1]
-dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].str.replace('(', '')
-dataDetect['fnames'] = dataDetect['fnames'].str.replace(':', '')
-dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].str.replace('no', '0')
-dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].astype('int')
-dataDetect
-
-# In[3]:
-
-
-dataSegment = dataSegment.drop([0, 1, 3, 5, 6], axis=1)
-dataSegment.columns = ['fnames', 'Segment-Npotholes']
-dataSegment['fnames'] = dataSegment['fnames'].str.split('\\').str[-1]
-dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].str.replace('(', '')
-dataSegment['fnames'] = dataSegment['fnames'].str.replace(':', '')
-dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].str.replace('no', '0')
-dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].astype('int')
-dataSegment
-
-# In[4]:
-
-
-data = pd.merge(dataDetect, dataSegment, on='fnames', how='left')
-data
-
-# In[5]:
-
-
-# DetectFalse为Detect-Npotholes为0的个数
-# DetectTrue为Detect-Npotholes不为0的个数
-# SegmentFalse为Segment-Npotholes为0的个数
-# SegmentTrue为Segment-Npotholes不为0的个数
-DetectFalse = 0
-DetectTrue = 0
-SegmentFalse = 0
-SegmentTrue = 0
-for i in range(len(data)):
-    if data['Detect-Npotholes'][i] == 0:
-        DetectFalse += 1
-    else:
-        DetectTrue += 1
-    if data['Segment-Npotholes'][i] == 0:
-        SegmentFalse += 1
-    else:
-        SegmentTrue += 1
-
-# In[6]:
-
-
-DetectTrue / (DetectFalse + DetectTrue)
-
-# In[7]:
-
-
-SegmentTrue / (SegmentFalse + SegmentTrue)
-\end{python}
-
-\textbf{C.10 Data Preprocessing [数据预处理]}
-\begin{python}
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import os
-import shutil
-
-# 指定目录"DATA"
-path = "DATA"
-
-# 在"DATA"文件夹中创建"normal"和"potholes"文件夹
-os.mkdir(os.path.join(path, "normal"))
-os.mkdir(os.path.join(path, "potholes"))
-
-# 读取"DATA"文件夹，若文件名中含有"normal"，则将其放置于"normal"文件夹中，否则放置于"potholes"文件夹中
-files = os.listdir(path)
-for file in files:
-    if "normal" in file:
-        shutil.move(os.path.join(path, file), os.path.join(path, "normal"))
-    else:
-        shutil.move(os.path.join(path, file), os.path.join(path, "potholes"))
-
-\end{python}
-
-\textbf{C.11 Comparative Analysis of Normal and Potholes [正常与坑洼道路比较分析]}
+\textbf{C.1 Comparative Analysis of Normal and Potholes [正常与坑洼道路比较分析]}
 \begin{python}
 #!/usr/bin/env python
 # coding: utf-8
@@ -1610,7 +888,35 @@ plt.title('(b) Contours', y=-0.4, fontsize=12)
 plt.savefig('Figures\\potholes1轮廓检测.pdf', bbox_inches='tight')
 \end{python}
 
-\textbf{C.12 Images Display [图像展示]}
+\textbf{C.2 Data Preprocessing [数据预处理]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import os
+import shutil
+
+# 指定目录"DATA"
+path = "DATA"
+
+# 在"DATA"文件夹中创建"normal"和"potholes"文件夹
+os.mkdir(os.path.join(path, "normal"))
+os.mkdir(os.path.join(path, "potholes"))
+
+# 读取"DATA"文件夹，若文件名中含有"normal"，则将其放置于"normal"文件夹中，否则放置于"potholes"文件夹中
+files = os.listdir(path)
+for file in files:
+    if "normal" in file:
+        shutil.move(os.path.join(path, file), os.path.join(path, "normal"))
+    else:
+        shutil.move(os.path.join(path, file), os.path.join(path, "potholes"))
+
+\end{python}
+
+\textbf{C.3 Images Display [图像展示]}
 \begin{python}
 #!/usr/bin/env python
 # coding: utf-8
@@ -1632,6 +938,643 @@ cv2.imwrite("potholes1_Gaussian.jpg", Gaussian)
 cv2.imwrite("potholes1_Bilateral.jpg", Bilateral)
 cv2.imwrite("potholes1_Rotate.jpg", Rotate)
 
+\end{python}
+
+\textbf{C.4 isat2txt [isat转txt]}
+\begin{python}
+import json
+import os
+import shutil
+
+category_mapping = {"potholes": 0}
+# ISAT格式的实例分割标注文件
+ISAT_FOLDER = "./annotations"
+# YOLO格式的实例分割标注文件
+YOLO_FOLDER = "./labels"
+
+# 创建YoloV8标注的文件夹
+if not os.path.exists(YOLO_FOLDER):
+    os.makedirs(YOLO_FOLDER)
+
+
+# 载入所有的ISAT的JSON文件
+for filename in os.listdir(ISAT_FOLDER):
+    if not filename.endswith(".json"):
+        # 不是json格式, 跳过
+        continue
+    # 载入ISAT的JSON文件
+    with open(os.path.join(ISAT_FOLDER, filename), "r") as f:
+        isat = json.load(f)
+    # 提取文件名(不带文件后缀)
+    image_name = filename.split(".")[0]
+    # Yolo格式的标注文件名, 后缀是txt
+    yolo_filename = f"{image_name}.txt"
+    # 写入信息
+    with open(os.path.join(YOLO_FOLDER, yolo_filename), "w") as f:
+        # 获取图像信息
+        # - 图像宽度
+
+        image_width = isat["info"]["width"]
+
+        # try:
+        #     image_width = isat["info"]["width"]
+        # except KeyError:
+        #     break
+        # - 图像高度
+        image_height = isat["info"]["height"]
+        # 获取实例标注数据
+        for annotation in isat["objects"]:
+            # 获取类别名称
+            category_name = annotation["category"]
+            # 如果不在类别名称字典里面，跳过
+            if category_name not in category_mapping:
+                continue
+            # 从字典里面查询类别ID
+            category_id = category_mapping[category_name]
+            # 提取分割信息
+            segmentation = annotation["segmentation"]
+            segmentation_yolo = []
+            # 遍历所有的轮廓点
+            for segment in segmentation:
+                # 提取轮廓点的像素坐标 x, y
+                x, y = segment
+                # 归一化处理
+                x_center = x/image_width
+                y_center = y/image_height
+                # 添加到segmentation_yolo里面
+                segmentation_yolo.append(f"{x_center:.4f} {y_center:.4f}")
+            segmentation_yolo_str = " ".join(segmentation_yolo)
+            # 添加一行Yolo格式的实例分割数据
+            # 格式如下: class_id x1 y1 x2 y2 ... xn yn\n
+            f.write(f"{category_id} {segmentation_yolo_str}\n")
+\end{python}
+
+\textbf{C.5 xml2txt [xml转txt]}
+\begin{python}
+import xml.etree.ElementTree as ET
+import os, cv2
+import numpy as np
+from os import listdir
+from os.path import join
+
+#将给定的XML格式的标注文件转换为YOLOv8所需的TXT格式，并记录数据集中的类别信息
+classes = []
+
+def convert(size, box):
+    dw = 1. / (size[0])
+    dh = 1. / (size[1])
+    x = (box[0] + box[1]) / 2.0 - 1
+    y = (box[2] + box[3]) / 2.0 - 1
+    w = box[1] - box[0]
+    h = box[3] - box[2]
+    x = x * dw
+    w = w * dw
+    y = y * dh
+    h = h * dh
+    return (x, y, w, h)
+
+
+def convert_annotation(xmlpath, xmlname):
+    with open(xmlpath, "r", encoding='utf-8') as in_file:
+        txtname = xmlname[:-4] + '.txt'
+        txtfile = os.path.join(txtpath, txtname)
+        tree = ET.parse(in_file)
+        root = tree.getroot()
+        filename = root.find('filename')
+        img = cv2.imdecode(np.fromfile('{}/{}.{}'.format(imgpath, xmlname[:-4], postfix), np.uint8), cv2.IMREAD_COLOR)
+        h, w = img.shape[:2]
+        res = []
+        for obj in root.iter('object'):
+            cls = obj.find('name').text
+            if cls not in classes:
+                classes.append(cls)
+            cls_id = classes.index(cls)
+            xmlbox = obj.find('bndbox')
+            b = (float(xmlbox.find('xmin').text), float(xmlbox.find('xmax').text), float(xmlbox.find('ymin').text),
+                 float(xmlbox.find('ymax').text))
+            bb = convert((w, h), b)
+            res.append(str(cls_id) + " " + " ".join([str(a) for a in bb]))
+        if len(res) != 0:
+            with open(txtfile, 'w+') as f:
+                f.write('\n'.join(res))
+
+
+if __name__ == "__main__":
+    postfix = 'jpg'
+    imgpath = 'VOCdevkit/JPEGImages'
+    xmlpath = 'VOCdevkit/Annotations'
+    txtpath = 'VOCdevkit/txt'
+    
+    if not os.path.exists(txtpath):
+        os.makedirs(txtpath, exist_ok=True)
+    
+    list = os.listdir(xmlpath)
+    error_file_list = []
+    for i in range(0, len(list)):
+        try:
+            path = os.path.join(xmlpath, list[i])
+            if ('.xml' in path) or ('.XML' in path):
+                convert_annotation(path, list[i])
+                print(f'file {list[i]} convert success.')
+            else:
+                print(f'file {list[i]} is not xml format.')
+        except Exception as e:
+            print(f'file {list[i]} convert error.')
+            print(f'error message:\n{e}')
+            error_file_list.append(list[i])
+    print(f'this file convert failure\n{error_file_list}')
+    print(f'Dataset Classes:{classes}')
+\end{python}
+
+\textbf{C.6 Segment Spilt Data [图像分割数据集划分]}
+\begin{python}
+import os
+import random
+from tqdm import tqdm
+
+# 指定 images 文件夹路径
+image_dir = "./images"
+# 指定 labels 文件夹路径
+label_dir = "./labels"
+# 创建一个空列表来存储有效图片的路径
+valid_images = []
+# 创建一个空列表来存储有效 label 的路径
+valid_labels = []
+
+# 遍历 images 文件夹下的所有图片
+for image_name in os.listdir(image_dir):
+    # 获取图片的完整路径
+    image_path = os.path.join(image_dir, image_name)
+    # 获取图片文件的扩展名
+    ext = os.path.splitext(image_name)[-1]
+    # 根据扩展名替换成对应的 label 文件名
+    label_name = image_name.replace(ext, ".txt")
+    # 获取对应 label 的完整路径
+    label_path = os.path.join(label_dir, label_name)
+    # 判断 label 是否存在
+    if not os.path.exists(label_path):
+        # 删除图片
+        os.remove(image_path)
+        print("deleted:", image_path)
+    else:
+        # 将图片路径添加到列表中
+        valid_images.append(image_path)
+        # 将label路径添加到列表中
+        valid_labels.append(label_path)
+        # print("valid:", image_path, label_path)
+# 遍历每个有效图片路径
+for i in tqdm(range(len(valid_images))):
+    image_path = valid_images[i]
+    label_path = valid_labels[i]
+    # 随机生成一个概率
+    r = random.random()
+    # 判断图片应该移动到哪个文件夹
+    # train：valid：test = 7:2:1
+    if r < 0.1:
+        # 移动到 test 文件夹
+        destination = "./datasets/test"
+    elif r < 0.3:
+        # 移动到 valid 文件夹
+        destination = "./datasets/valid"
+    else:
+        # 移动到 train 文件夹
+        destination = "./datasets/train"
+    # 生成目标文件夹中图片的新路径
+    image_destination_path = os.path.join(destination, "images", os.path.basename(image_path))
+    # 移动图片到目标文件夹
+    os.rename(image_path, image_destination_path)
+    # 生成目标文件夹中 label 的新路径
+    label_destination_path = os.path.join(destination, "labels", os.path.basename(label_path))
+    # 移动 label 到目标文件夹
+    os.rename(label_path, label_destination_path)
+print("valid images:", valid_images)
+# 输出有效label路径列表
+print("valid labels:", valid_labels)
+\end{python}
+
+\textbf{C.7 Detect Spilt Data [图像检测数据集划分]}
+\begin{python}
+import os, shutil
+from sklearn.model_selection import train_test_split
+
+# 用于将图像和标注文件按照一定比例划分为训练集、验证集和测试集，并将它们分别复制到相应的文件夹中
+val_size = 0.1
+test_size = 0.1
+postfix = 'jpg'
+imgpath = 'VOCdevkit/JPEGImages'
+txtpath = 'VOCdevkit/txt'
+
+os.makedirs('images/train', exist_ok=True)
+os.makedirs('images/val', exist_ok=True)
+os.makedirs('images/test', exist_ok=True)
+os.makedirs('labels/train', exist_ok=True)
+os.makedirs('labels/val', exist_ok=True)
+os.makedirs('labels/test', exist_ok=True)
+
+listdir = [i for i in os.listdir(txtpath) if 'txt' in i]
+train, test = train_test_split(listdir, test_size=test_size, shuffle=True, random_state=0)
+train, val = train_test_split(train, test_size=val_size, shuffle=True, random_state=0)
+print(f'train set size:{len(train)} val set size:{len(val)} test set size:{len(test)}')
+
+for i in train:
+    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/train/{}.{}'.format(i[:-4], postfix))
+    shutil.copy('{}/{}'.format(txtpath, i), 'labels/train/{}'.format(i))
+
+for i in val:
+    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/val/{}.{}'.format(i[:-4], postfix))
+    shutil.copy('{}/{}'.format(txtpath, i), 'labels/val/{}'.format(i))
+
+for i in test:
+    shutil.copy('{}/{}.{}'.format(imgpath, i[:-4], postfix), 'images/test/{}.{}'.format(i[:-4], postfix))
+    shutil.copy('{}/{}'.format(txtpath, i), 'labels/test/{}'.format(i))
+\end{python}
+
+\textbf{C.8 YOLOv8s Segment [YOLOv8s图像分割]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+from ultralytics import YOLO
+
+# In[3]:
+
+
+model = YOLO('yolov8s-seg.pt')
+results = model.train(data="dataset/VOCdevkit/datasets/potholes.yaml", epochs=300, device='cpu')
+
+# In[2]:
+
+
+model = YOLO('potholesSegment.pt')
+
+# In[3]:
+
+
+resultOne = model('potholes\\part1', save=True)
+
+# In[4]:
+
+
+resultTwo = model('potholes\\part2', save=True)
+
+# In[5]:
+
+
+resultThree = model('potholes\\part3', save=True)
+
+# In[3]:
+
+
+resultFour = model('potholes\\part4', save=True)
+
+# In[4]:
+
+
+resultFive = model('potholes\\part5', save=True)
+
+# In[3]:
+
+
+resultSix = model('potholes\\part6', save=True)
+
+# In[4]:
+
+
+resultSeven = model('potholes\\part7', save=True)
+
+# In[3]:
+
+
+resultEight = model('potholes\\part8', save=True)
+\end{python}
+
+\textbf{C.9 YOLOv8n Detect [YOLOv8n图像检测]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+from ultralytics import YOLO
+
+
+# In[47]:
+
+
+model = YOLO("potholesDetect.pt")
+resultsOne = model.predict(source="potholes\\partOne", save=True, save_conf=True, save_txt=True,imgsz=416)
+
+
+# In[48]:
+
+
+model = YOLO("potholesDetect.pt")
+resultsTwo = model.predict(source="potholes\\partTwo", save=True, save_conf=True, save_txt=True,imgsz=416)
+\end{python}
+
+\textbf{C.10 Coordinate Transformation [坐标转换]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import os
+import cv2
+import torch
+import numpy as np
+
+# In[2]:
+
+
+label_path = 'potholes\labels'
+image_path = 'potholes\images'
+
+
+def xywhn2xyxy(x, w=416, h=416, padw=0, padh=0):
+    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[:, 0] = w * (x[:, 0] - x[:, 2] / 2) + padw  # top left x
+    y[:, 1] = h * (x[:, 1] - x[:, 3] / 2) + padh  # top left y
+    y[:, 2] = w * (x[:, 0] + x[:, 2] / 2) + padw  # bottom right x
+    y[:, 3] = h * (x[:, 1] + x[:, 3] / 2) + padh  # bottom right y
+    return y
+
+
+folder = os.path.exists('potholes\\labelsNew')
+if not folder:
+    os.makedirs('potholes\\labelsNew')
+
+folderlist = os.listdir(label_path)
+for i in folderlist:
+    label_path_new = os.path.join(label_path, i)
+    with open(label_path_new, 'r') as f:
+        lb = np.array([x.split() for x in f.read().strip().splitlines()], dtype=np.float32)  # labels
+        print(lb)
+    read_label = label_path_new.replace(".txt", ".jpg")
+    read_label_path = read_label.replace(label_path, image_path)
+    print(read_label_path, "ddd")
+    img = cv2.imread(str(read_label_path))
+    h, w = img.shape[:2]
+    lb[:, 1:] = xywhn2xyxy(lb[:, 1:], w, h, 0, 0)
+
+    for _, x in enumerate(lb):
+        class_label = int(x[0])
+
+        with open('potholes\\labelsNew\\' + i, 'a') as fw:
+            fw.write(str(int(x[0])) + ' ' + str(x[5]) + ' ' + str(x[1]) + ' ' + str(x[2]) + ' ' + str(x[3]) + ' ' + str(
+                x[4]) + '\n')
+\end{python}
+
+\textbf{C.11 Proportional Calculation [面积占比估算]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import os
+import cv2
+import numpy as np
+import pandas as pd
+
+# In[2]:
+
+
+labelsList = os.listdir('potholes\\labelsNew')
+imagesList = os.listdir('potholes\\images')
+
+# In[3]:
+
+
+labelsDf = pd.DataFrame(labelsList, columns=['fnames'])
+labelsDf
+
+# In[4]:
+
+
+Npotholes = pd.read_csv('potholes\\detectResults.txt', sep=' ', header=None)
+Npotholes = Npotholes.drop([0, 1, 3, 5, 6], axis=1)
+Npotholes.columns = ['fnames', 'Npotholes']
+Npotholes['fnames'] = Npotholes['fnames'].str.split('\\').str[-1]
+Npotholes['Npotholes'] = Npotholes['Npotholes'].str.replace('(', '')
+Npotholes['fnames'] = Npotholes['fnames'].str.replace(':', '')
+Npotholes
+
+# In[5]:
+
+
+Npotholes['Npotholes'] = Npotholes['Npotholes'].str.replace('no', '0')
+Npotholes['Npotholes'] = Npotholes['Npotholes'].astype('int')
+Npotholes
+
+# In[6]:
+
+
+data = pd.DataFrame(columns=['Type', '置信度', 'x1', 'y1', 'x2', 'y2', 'fnames'])
+data
+
+# In[7]:
+
+
+for i in labelsList:
+    with open('potholes\\labelsNew\\' + i, 'r') as f:
+        content = f.readlines()
+        lb = np.array([x.strip().split() for x in content], dtype=np.float32)  # labels
+        lb = pd.DataFrame(lb, columns=['Type', '置信度', 'x1', 'y1', 'x2', 'y2'])
+        lb['fnames'] = i
+
+    data = data._append(lb, ignore_index=True)
+
+data
+
+# In[8]:
+
+
+data = data.drop('Type', axis=1)
+data = data[['fnames', '置信度', 'x1', 'y1', 'x2', 'y2']]
+data['fnames'] = data['fnames'].str.replace('.txt', '.jpg')
+data
+
+# In[9]:
+
+
+data = pd.merge(data, Npotholes, on='fnames', how='right')
+data
+
+# In[10]:
+
+
+potholesImages = pd.DataFrame(imagesList, columns=['fnames'])
+potholesImages
+
+# In[11]:
+
+
+for i in imagesList:
+    img = cv2.imread('potholes\\images\\' + i)
+    height, width, channels = img.shape
+    potholesImages.loc[potholesImages['fnames'] == i, 'height'] = height
+    potholesImages.loc[potholesImages['fnames'] == i, 'width'] = width
+
+potholesImages
+
+# In[12]:
+
+
+data = pd.merge(data, potholesImages, on='fnames', how='left')
+data
+
+# In[13]:
+
+
+data['S'] = data['height'] * data['width']
+data['X'] = data['x2'] - data['x1']
+data['Y'] = data['y2'] - data['y1']
+data['Spotholes'] = data['X'] * data['Y']
+data['Spotholes/S'] = data['Spotholes'] / data['S'] * 100
+data
+
+# In[14]:
+
+
+data['Spotholes/S'] = data['Spotholes/S'].fillna(data['Spotholes/S'].mean())
+data['Spotholes/S'] = data['Spotholes/S'].apply(np.ceil)
+data['Spotholes/S'] = data['Spotholes/S'].astype('int')
+data
+
+# In[15]:
+
+
+dataNew = data.groupby('fnames').apply(lambda x: x.loc[x['Spotholes/S'].idxmax()])
+dataNew
+
+# In[16]:
+
+
+dataNew = dataNew.reset_index(drop=True)
+dataNew
+
+# In[17]:
+
+
+dataR = pd.read_csv('未知数据集预测效果.csv')
+dataR = dataR.drop(['imgType', 'label', 'isTrue'], axis=1)
+dataR
+
+# In[18]:
+
+
+Results = pd.merge(dataR, dataNew, on='fnames', how='left')
+Results
+
+# In[19]:
+
+
+# 修改guy7iodk.jpg行，height=1587，width=1200，S=1587*1200=1904400，Spotholes=954792，Spotholes/S=50
+Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'height'] = 1587
+Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'width'] = 1200
+Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'S'] = 1904400
+Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'Spotholes'] = 954792
+Results.loc[Results['fnames'] == 'guy7iodk.jpg', 'Spotholes/S'] = 50
+Results
+
+# In[20]:
+
+
+Results.loc[Results['imgClass'] == 'normal', 'Spotholes/S'] = 0
+Results
+
+# In[21]:
+
+
+Results['Spotholes/S'] = Results['Spotholes/S'].astype('int')
+Results
+
+# In[22]:
+
+
+Results.to_csv('SpotholesS.csv', index=False)
+\end{python}
+
+\textbf{C.12 Detect Segment Analyze [图像检测与图像分割效果分析]}
+\begin{python}
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import pandas as pd
+
+dataDetect = pd.read_csv('detectResults.txt', sep=' ', header=None)
+dataSegment = pd.read_csv('segmentResults.txt', sep=' ', header=None)
+
+# In[2]:
+
+
+dataDetect = dataDetect.drop([0, 1, 3, 5, 6], axis=1)
+dataDetect.columns = ['fnames', 'Detect-Npotholes']
+dataDetect['fnames'] = dataDetect['fnames'].str.split('\\').str[-1]
+dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].str.replace('(', '')
+dataDetect['fnames'] = dataDetect['fnames'].str.replace(':', '')
+dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].str.replace('no', '0')
+dataDetect['Detect-Npotholes'] = dataDetect['Detect-Npotholes'].astype('int')
+dataDetect
+
+# In[3]:
+
+
+dataSegment = dataSegment.drop([0, 1, 3, 5, 6], axis=1)
+dataSegment.columns = ['fnames', 'Segment-Npotholes']
+dataSegment['fnames'] = dataSegment['fnames'].str.split('\\').str[-1]
+dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].str.replace('(', '')
+dataSegment['fnames'] = dataSegment['fnames'].str.replace(':', '')
+dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].str.replace('no', '0')
+dataSegment['Segment-Npotholes'] = dataSegment['Segment-Npotholes'].astype('int')
+dataSegment
+
+# In[4]:
+
+
+data = pd.merge(dataDetect, dataSegment, on='fnames', how='left')
+data
+
+# In[5]:
+
+
+# DetectFalse为Detect-Npotholes为0的个数
+# DetectTrue为Detect-Npotholes不为0的个数
+# SegmentFalse为Segment-Npotholes为0的个数
+# SegmentTrue为Segment-Npotholes不为0的个数
+DetectFalse = 0
+DetectTrue = 0
+SegmentFalse = 0
+SegmentTrue = 0
+for i in range(len(data)):
+    if data['Detect-Npotholes'][i] == 0:
+        DetectFalse += 1
+    else:
+        DetectTrue += 1
+    if data['Segment-Npotholes'][i] == 0:
+        SegmentFalse += 1
+    else:
+        SegmentTrue += 1
+
+# In[6]:
+
+
+DetectTrue / (DetectFalse + DetectTrue)
+
+# In[7]:
+
+
+SegmentTrue / (SegmentFalse + SegmentTrue)
 \end{python}
 
 \newpage
