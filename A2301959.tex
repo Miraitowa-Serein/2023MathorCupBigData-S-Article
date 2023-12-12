@@ -545,9 +545,10 @@
 			\end{equation}
 		\end{itemize}
 	\end{itemize}
-	
+
 	此外，由于坑洼图像的多样、复杂，部分图片可能存在上述基本情况的综合，因此，对于每一情况，均需要特定计算，再求和，从而求得其占比。处理代码详见\textbf{附录-C.11，Proportional Calculation [面积占比估算]}。
 	\subsection{模型的评估}\label{模型效果分析}
+	\subsubsection{模型评估指标}
 	为更好地评估模型，我们针对上述模型进行多维度评估，这里我们用到的有：
 	\begin{itemize}
 		\item \textbf{损失值（Loss）}：损失函数由预测的中心坐标损失、预测边界框的宽高损失、预测的类别损失、预测的置信度损失四个部分组成\textcolor{blue}{\cite{LOSS}}。
@@ -601,7 +602,32 @@
 		\item \textbf{混淆矩阵（Confusion Matrix）}：矩阵每一行表示样本标签的实际类别，在本题中表示道路类型：为正常还是坑洼的实际标签；每一列表示样本标签的预测类别，在本题中表示道路类型：为正常还是坑洼的预测标签。因此该图示的主对角线数据之和即为模型预测准确的样本数。这里此外还需要引入四项值，而混淆矩阵可以直观地观察到预测准确与错误的情况，以及模型对于每一类别的区分程度。
 		\item \textbf{精确率-召回率曲线（Precision-Recall Curve，PR-Curve）}：该图像可表现出分类的预测精度与召回率之间的关系\textcolor{blue}{\cite{Yellowbrick}}。图像的填充区域越大，分类效果越优。
 	\end{itemize}
-
+	\subsubsection{YOLOv8s-Segment}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{Figures/segment/SegmentBox.pdf}
+		\caption{YOLOv8s-Segment Box}
+		\label{fig:YOLOv8s-Segment-Box}
+	\end{figure}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{Figures/segment/SegmentMask.pdf}
+		\caption{YOLOv8s-Segment Mask}
+		\label{fig:YOLOv8s-Segment-Mask}
+	\end{figure}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{Figures/segment/SegmentConfusionMatrix.pdf}
+		\caption{YOLOv8s-Segment Confusion Matrix}
+		\label{fig:YOLOv8s-Segment-ConfusionMatrix}
+	\end{figure}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.37]{Figures/segment/SegmentResults.png}
+		\caption{YOLOv8s-Segment Results}
+		\label{fig:YOLOv8s-Segment-Results}
+	\end{figure}
+	\subsubsection{YOLOv8n-Detect}
 
 	\subsection{未知数据集的预测}
 	对于该问题，具体处理代码见\textbf{附录-C.7，Predict [预测]}。我们按以下步骤进行处理：
@@ -1726,4 +1752,22 @@ head:
 
   - [[15, 18, 21], 1, Segment, [nc, 32, 256]]  # Segment(P3, P4, P5)
 \end{python}
+
+\newpage
+% \phantomsection
+% \addcontentsline{toc}{subsection}{[D]问题解决源程序}
+	% \section*{[D]问题解决源程序}
+\noindent{\heiti [D]图示}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{Figures/segment/附Segment训练.pdf}
+	\caption{附Segment训练}
+	\label{fig:附Segment训练}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{Figures/detect/附Detect训练.pdf}
+	\caption{附Detect训练}
+	\label{fig:附Detect训练}
+\end{figure}
 \end{document}
