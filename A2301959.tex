@@ -409,12 +409,47 @@
 	\subsubsection{模型的训练}
 	\begin{itemize}
 		\item \textbf{YOLOv8s-Segment}
-		
+
+		在训练时，模型会生成数据集的相关特征，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment训练数据集特征}}所示。
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.5]{Figures/segment/SegementLabels.pdf}
+			\caption{YOLOv8s-Segment训练数据集特征}
+			\label{fig:YOLOv8s-Segment训练数据集特征}
+		\end{figure}
+
+		同时，YOLOv8模型也会对训练集数据进行增强，有\textbf{马赛克（Mosaic）数据增强}、\textbf{自适应锚框（Anchor）计算}、\textbf{自适应图片缩放}和\textbf{Mixup数据增强}，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment训练数据集增强}}所示。
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.5]{Figures/segment/Segment训练.pdf}
+			\caption{YOLOv8s-Segment训练数据集增强}
+			\label{fig:YOLOv8s-Segment训练数据集增强}
+		\end{figure}
+
+		训练过程的每一次迭代的结果保存于“支撑材料/process/训练”文件夹中。训练结束后，会生成“best.pt”与“last.pt”模型文件，我们选择“best.pt”作为后续预测的图像分割模型。而对于模型的效果分析，详见\textcolor{blue}{\nameref{模型效果分析}}。
 		\item \textbf{YOLOv8n-Detect}
+		
+		对于该模型的训练与上述模型类似。在训练时，其也会生成数据集的相关特征，如\textcolor{blue}{\cref{fig:YOLOv8n-Detect训练数据集特征}}所示。
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.5]{Figures/detect/DetectLabels.pdf}
+			\caption{YOLOv8n-Detect训练数据集特征}
+			\label{fig:YOLOv8n-Detect训练数据集特征}
+		\end{figure}
+
+		在训练过程中，模型也将对数据进行增强，部分效果如\textcolor{blue}{\cref{fig:YOLOv8s-Segment训练数据集增强}}所示，由于篇幅原因，其余的详见附录。
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.5]{Figures/detect/Detect训练.pdf}
+			\caption{YOLOv8n-Detect训练数据集增强}
+			\label{fig:YOLOv8n-Detect训练数据集增强}
+		\end{figure}
+
+		训练过程的每一次迭代的结果保存于“支撑材料/process/训练”文件夹中。训练结束后，会生成“best.pt”与“last.pt”模型文件，我们选择“best.pt”作为后续预测的图像检测模型。而对于模型的效果分析，详见\textcolor{blue}{\nameref{模型效果分析}}。
 	\end{itemize}
 	\subsection{测试集图像坑洼特性预测}
 
-	\subsection{模型的评估}
+	\subsection{模型的评估}\label{模型效果分析}
 	为更好地评估模型，我们针对上述三种模型进行多维度评估，并针对各模型进行针对性分析。这里我们用到的有：
 	\begin{itemize}
 		\item \textbf{模型训练及预测时间和（$T$）}
