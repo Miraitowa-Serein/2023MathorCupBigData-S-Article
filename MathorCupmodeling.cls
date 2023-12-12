@@ -95,7 +95,7 @@
 \DeclareMathSymbol{\prod}{\mathop}{CMlargesymbols}{"51}
 
 % 扩展的数学宏包, 可根据自己的需求载入
-% \RequirePackage{bm} %用\bm{}命令生成伪粗体
+\RequirePackage{bm} %用\bm{}命令生成伪粗体
 % \RequirePackage{upgreek}%用\uppi 调用正体的圆周率
 % \RequirePackage{mathrsfs}%\mathscr{}调用傅里叶变换,拉普拉斯变换的符号
 
