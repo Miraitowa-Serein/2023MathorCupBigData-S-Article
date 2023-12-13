@@ -10,11 +10,17 @@
 \extrafloats{100}
 \bianhao{MCB2301959}
 \tihao{A}
-\timu{\textbf{基于卷积神经网络CNN图像特征提取的SVM坑洼道路检测与识别}}
-\keyword{计算机视觉；卷积神经网络；支持向量机；特征提取；模型融合；可视化多维评估}
+\timu{\textbf{基于YOLOv8的坑洼道路目标自动检测与特性提取}}
+\keyword{计算机视觉；YOLOv8；图像检测；图像分割；可视化多维评估}
 \begin{document}
 	\begin{abstract}
-		啥也不说了，先占个坑，等我有空再写。
+		坑洼道路的高效检测可有效地推进无人驾驶、地质勘探、航天科学等领域的研究与应用。由于道路图像的环境背景复杂及多变性，传统算法难以提取有效特征，效果较差。因此，本文旨在建立\textbf{基于YOLOv8建立的图像目标检测与分割模型}，对坑道路坑洼的特性进行提取。
+
+		{\heiti 针对问题一}，需要建立更精准的识别道路坑洼边缘特性的模型，用于完成道路避障、道路修复等工作。因此考虑对图像的坑洼进行\textbf{目标检测}，在此基础上对坑洼进行\textbf{图像分割}，从而可有效地提取坑洼的边缘。首先，结合初赛分析的相关结论，对道路坑洼的特征进行\textbf{机理分析}，包括\textbf{原图、热力图、RGB直方图、灰度直方图的对比、边缘及轮廓检测、以及阈值分割}，有效地从机理层面分析其特性，为模型的建立提供机理层面的支撑。之后，对图像文件进行\textbf{预处理}，包括\textbf{人为再分类、对标记错误的图像修正，并剔除异常图像}，防止错误的标记影响模型效果；\textbf{文件夹分类}，方便后续模型数据的读取；\textbf{原数据集保留与拓充}；\textbf{测试集数据预读取}，防止破损文件影响预测过程。随后，建立基于\textbf{YOLOv8s的图像分割（Segment）}及\textbf{YOLOv8n的图像检测（Detect）}模型，对道路坑洼特性进行训练学习、验证、测试。在此之前，还需要对图像的坑洼处（边缘）进行标注，本文采用\textbf{ISAT-SAM}及\textbf{Labelimg}分别对坑洼的区域及边缘进行标注，之后对标注文件进行\textbf{格式转换}，方便YOLOv8的读取，随后\textbf{划分训练集、测试集、验证集}，再对训练集采用\textbf{高斯滤波、双边滤波、旋转方法}对数据进行\textbf{初次增强}，最后配置训练所需文件，并开始训练模型。随着迭代的次数的增加，模型效果逐渐上升，且趋于稳定，待模型训练完成后，取迭代过程中\textbf{最优模型}对测试集数据的坑洼边缘进行提取，以\textbf{“em5acvux.jpg”}为例，提取效果见\textcolor{blue}{\cref{fig:效果展示}}。同时对模型效果进行详细分析，详见\textcolor{blue}{\nameref{模型效果分析}}，对于坑洼边缘的检测与分割，\textbf{精确率}最高可分别达$\boldsymbol{94.43\,\%}$、$\boldsymbol{90.48\,\%}$，\textbf{mAP50}最高可分别达$\boldsymbol{0.49485}$、$\boldsymbol{0.51992}$。其余指标结果详见\textcolor{blue}{\cref{tab:YOLOv8模型指标}}，模型效果良好。
+
+		{\heiti 针对问题二}，需要估算坑洼面积占比，因此考虑利用图像检测模型预测输出的坑洼边缘像素坐标，估算其像素面积，进而计算坑洼面积占比。同时，需要考虑到预测的坑洼的\textbf{多样复杂性}，可能存在\textbf{多个互不重叠的坑洼、边缘重叠的坑洼、坑洼标记重复}等情况，因此需要进行对应的处理，具体见\textcolor{blue}{\nameref{估算}}。此外，该方法需要考虑的情况较多，且估算存在一定误差。因此，提出一种\textbf{简便且准确}的方法，即利用\textbf{YOLOv8s-Segment}模型提取的坑洼区域，进行\textbf{阈值分割}，\textbf{像素点二值化}，求目标像素点占整体像素点比值，即可较为准确地求得坑洼占比。本文采用坐标法进行估算，并将结果保存至“test\_result2.csv”中。
+
+		\textbf{最后}，本文对所建立的模型的优缺点进行了中肯的评价、提出了模型的改进措施以及对模型进行了一定推广。
 	\end{abstract}
 
 	\pagestyle{empty}
@@ -45,6 +51,14 @@
 		\end{itemize}
 	\end{itemize}
 	\section{问题的分析}
+	\subsection{初赛总结}
+		{\heiti 针对问题一}，需要提取给定图像的特征，建立一个用于识别其为正常或是坑洼道路的识别率高、速度快、分类准确的模型。首先，对图像文件\textbf{预处理}，包括\textbf{人为再分类}，对标记错误的进行\textbf{修正}，或\textbf{剔除异常图像}；再将两类图像置于各子文件中。其次，从\textbf{机理层面}对正常与坑洼道路进行比较分析，包括\textbf{原图、热力图、RGB与灰度直方图的对比、边缘与轮廓检测、阈值分割}，从而有效地提取出\textbf{图像特征}。之后，利用\textbf{opencv-python}读取图像，并加入\textbf{try-except异常处理}语块，\textbf{防止破损文件污染模型}；此外，计算出正常与坑洼道路的个数比值为$\boldsymbol{6.32}$，即\textbf{数据集类别不平衡}，因此采用\textbf{基于抽样的方法平衡化}；之后，以$\boldsymbol{8:2}$的比例划分数据集为\textbf{训练集与测试集}；考虑到现有的图像未能较全面地展现特征，因此\textbf{对训练集采用高斯、双边滤波，旋转处理进行图像增强}。随后，建立支持向量机、卷积神经网络的单一模型，但由于\textbf{CNN中softmax函数的局限性}，因而，\textbf{利用卷积神经网络对图像信息的特征进行提取}，依据上述分析，设定其输入层、卷积层、激活层、池化层、全连接层参数；在此基础上，建立\textbf{支持向量机分类模型}，对道路类别进行分类。
+
+		{\heiti 针对问题二}，需要对问题一的模型进行训练，并进行多维度的评估分析，保证模型的准确性、快速性及普适性。因此，对问题一所建立的模型进行训练与测试，并从\textbf{模型耗时、准确率、分类报告、五折交叉验证，混淆矩阵、ROC/AUC曲线}进行多维度评价。模型\textbf{准确率在$\boldsymbol{95\,\%}$的置信水平下达到$\boldsymbol{\left(90\pm 8\right)\,\%}$}；其\textbf{精确率、召回率、F1分数值在各维度下均于$\boldsymbol{88\,\%}$及以上}；\textbf{ROC/AUC曲线靠近图的左上角，曲线下面积达到$\boldsymbol{0.90}$}。此外，还将其与单一模型进行多维度对比，\textbf{准确率最高可提升$\boldsymbol{3\,\%}$}，模型提升效果良好。
+
+		{\heiti 针对问题三}，需要利用上述已建立的模型，对未知数据集图像进行分类，并保存结果。经过读取模型、读取数据、数据集预处理、预测得出模型\textbf{在4942张图像中，识别出坑洼道路为3765张，识别为正常道路为1177张}。
+		
+		{\heiti 最后}，对所建立的模型的优缺点进行了中肯的评价、提出了模型的改进措施以及对模型进行了一定推广。
 	\subsection{问题的整体分析}
 	该题是一个基于计算机视觉的坑洼道路的图像数据分析、检测类问题。
 
@@ -55,14 +69,6 @@
 	\textbf{从模型的选择看}，本题图像数量多，特征复杂，且需要对道路中的坑洼边缘进行检测，同时估算其像素占比。因此，我们考虑图像增强技术，建立基于Ultralytics平台的YOLO（You Only Look Once, YOLO）算法，对道路的坑洼特性进行学习。
 
 	\textbf{从编程软件的选择看}，本题为图像大数据分析类，需要对大量的图片数据进行分析，并依据设问建立合适的模型，对坑洼道路的边缘进行提取，估算其像素占比，因此我们选择使用基于Pycharm内核的Python Jupyter对问题进行求解，其交互式的编程范式及轻量化，方便且高效。
-	\subsection{初赛总结}
-		{\heiti 针对问题一}，需要提取给定图像的特征，建立一个用于识别其为正常或是坑洼道路的识别率高、速度快、分类准确的模型。首先，对图像文件\textbf{预处理}，包括\textbf{人为再分类}，对标记错误的进行\textbf{修正}，或\textbf{剔除异常图像}；再将两类图像置于各子文件中。其次，从\textbf{机理层面}对正常与坑洼道路进行比较分析，包括\textbf{原图、热力图、RGB与灰度直方图的对比、边缘与轮廓检测、阈值分割}，从而有效地提取出\textbf{图像特征}。之后，利用\textbf{opencv-python}读取图像，并加入\textbf{try-except异常处理}语块，\textbf{防止破损文件污染模型}；此外，计算出正常与坑洼道路的个数比值为$\boldsymbol{6.32}$，即\textbf{数据集类别不平衡}，因此采用\textbf{基于抽样的方法平衡化}；之后，以$\boldsymbol{8:2}$的比例划分数据集为\textbf{训练集与测试集}；考虑到现有的图像未能较全面地展现特征，因此\textbf{对训练集采用高斯、双边滤波，旋转处理进行图像增强}。随后，建立支持向量机、卷积神经网络的单一模型，但由于\textbf{CNN中softmax函数的局限性}，因而，\textbf{利用卷积神经网络对图像信息的特征进行提取}，依据上述分析，设定其输入层、卷积层、激活层、池化层、全连接层参数；在此基础上，建立\textbf{支持向量机分类模型}，对道路类别进行分类。
-
-		{\heiti 针对问题二}，需要对问题一的模型进行训练，并进行多维度的评估分析，保证模型的准确性、快速性及普适性。因此，对问题一所建立的模型进行训练与测试，并从\textbf{模型耗时、准确率、分类报告、五折交叉验证，混淆矩阵、ROC/AUC曲线}进行多维度评价。模型\textbf{准确率在$\boldsymbol{95\,\%}$的置信水平下达到$\boldsymbol{\left(90\pm 8\right)\,\%}$}；其\textbf{精确率、召回率、F1分数值在各维度下均于$\boldsymbol{88\,\%}$及以上}；\textbf{ROC/AUC曲线靠近图的左上角，曲线下面积达到$\boldsymbol{0.90}$}。此外，还将其与单一模型进行多维度对比，\textbf{准确率最高可提升$\boldsymbol{3\,\%}$}，模型提升效果良好。
-
-		{\heiti 针对问题三}，需要利用上述已建立的模型，对未知数据集图像进行分类，并保存结果。经过读取模型、读取数据、数据集预处理、预测得出模型\textbf{在4942张图像中，识别出坑洼道路为3765张，识别为正常道路为1177张}。
-		
-		{\heiti 最后}，对所建立的模型的优缺点进行了中肯的评价、提出了模型的改进措施以及对模型进行了一定推广。
 	\subsection{各问逐一分析}
 	\begin{itemize}
 		\item \textbf{问题一}：核心目的在于\textbf{建立更精准的识别道路坑洼边缘特性的模型，用于完成道路避障、道路修复等工作}。因此考虑对图像文件进行分割，有效地提取坑洼的边缘。首先，需要对图像文件进行预处理，包括人为再分类、文件夹分类，对标记错误的图像进行修正，并剔除异常的图像、原数据集保留与拓充、测试集数据预读取。之后从机理层面对道路的坑洼处进行分析，包括原图、热力图、RGB直方图、灰度直方图的对比、边缘及轮廓检测、以及阈值分割，从而有效地从机理层面分析特性。在此基础上建立基于YOLOv8s的segment图像分割及YOLOv8n的detect图像检测模型，对道路的坑洼特性进行学习、训练。在此之前需要对图像进行标注，标注文件的格式转换，训练集、测试集、验证集三者的划分，对训练集进行数据增强，配置训练文件。待模型训练完成后，再读取迭代过程中最优模型对测试集数据的坑洼边缘进行提取。
@@ -88,7 +94,9 @@
 			\Xhline{0.08em}
 			\textbf{符号} & \multicolumn{1}{c}{\textbf{符号说明}}\\
 			\Xhline{0.05em}
-			$X$ & 图像横轴像素点的像素值\\
+			$W$ & 图像宽的像素值\\
+			$Y$ & 图像高的像素值\\
+			$W$ & 图像横轴像素点的像素值\\
 			$Y$ & 图像纵轴像素点的像素值\\
 			$I_f$ & 滤波后的图像像素值\\
 			$I$ & 原始图像像素值\\
@@ -96,13 +104,14 @@
 			$\Omega$ & 滤波邻域窗口\\
 			$F_s$ & 空间域核函数\\
 			$F_f$ & 像素值域核函数\\
-			$E\left(x\right)$ & 数据均值\\
-			$\lambda_n$ & 协方差矩阵特征值\\
-			$\boldsymbol{u}$ & 协方差矩阵特征向量\\
-			$C$ & SVM惩罚系数\\
-			$S$ & 池化区域面积\\
-			$N_{\text{TruePredict}}$ & 预测正确样本数\\
-			$N_{\text{Predict}}$ & 预测样本总数\\
+			$\left(x_{i1},y_{i1}\right)$ & 同一张图中第$i$个坑洼的左上角像素点坐标\\
+			$\left(x_{i2},y_{i2}\right)$ & 同一张图中第$i$个坑洼的右下角像素点坐标\\ 
+			$X_i$ & 同一张图中第$i$个坑洼的宽的像素值\\
+			$Y_i$ & 同一张图中第$i$个坑洼的高的像素值\\
+			$S_{\text{potholes}i}$ & 同一张图中第$i$个坑洼的像素面积\\
+			$S$ & 某张图的像素面积\\
+			$\eta$ & 坑洼面积占原图像面积比值百分数\\
+			$L$ & 模型损失值\\
 			\Xhline{0.08em}
 		\end{tabularx}}
 	\end{center}
@@ -133,35 +142,34 @@
 	对比正常道路和坑洼道路的热力图，我们发现若整个道路的状况相同，没有坑洼，则那一片区域的热力值近似相同，热力图呈现的颜色相仿；若道路中的某一块状况与周围不同，如出现坑洼，则出现坑洼的区域热力值发生变化，使在热力图中呈现的颜色与周围存在差异。正常道路热力值基本一致，其热力图呈现色彩差别小，而坑洼道路中非坑洼处与坑洼处热力值相差较大，坑洼处与非坑洼处颜色相比存在较大差异。
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{normal133热力图.pdf}
+		\includegraphics[scale=0.44]{normal133热力图.pdf}
 		\hspace{0.3in}
-		\includegraphics[scale=0.5]{potholes1热力图.pdf}
+		\includegraphics[scale=0.44]{potholes1热力图.pdf}
 		\caption{热力图对比}
 		\label{fig:热力图对比}
 	\end{figure}
 
 	\subsubsection{RGB、灰度直方图}
 	“normal133.jpg”及“potholes1.jpg”RGB及灰度直方图对比，如\textcolor{blue}{\cref{fig:RGB对比}}及\textcolor{blue}{\cref{fig:灰度对比}}所示。
-	
-	观察RGB直方图的对比，我们可以发现两者RGB三色整体变化具有一致性，但正常道路的RGB数值整体高于坑洼道路，且正常道路RGB峰值出现在像素值为$50\text{\textasciitilde}100$之间，而坑洼道路的RGB峰值出现在像素值为$0$与$250$处。
-
-	观察灰度直方图的对比，我们可先发现灰度直方图中正常道路所呈现的峰值远高于坑洼道路，其中坑洼道路的峰值出现在图像两侧，而正常道路的峰值出现在图像的中心位置。此外正常道路数值波动明显大于坑洼道路。故我们认为灰度直方图所展现的数值大小、分布及波动情况可以较好体现道路的坑洼情况。
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{normal133RGB直方图.pdf}
+		\includegraphics[scale=0.46]{normal133RGB直方图.pdf}
 		\hspace{0.3in}
-		\includegraphics[scale=0.5]{potholes1RGB直方图.pdf}
+		\includegraphics[scale=0.46]{potholes1RGB直方图.pdf}
 		\caption{RGB直方图对比}
 		\label{fig:RGB对比}
 	\end{figure}
+
+	观察RGB直方图的对比，我们可以发现两者RGB三色整体变化具有一致性，但正常道路的RGB数值整体高于坑洼道路，且正常道路RGB峰值出现在像素值为$50\text{\textasciitilde}100$之间，而坑洼道路的RGB峰值出现在像素值为$0$与$250$处。
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{normal133灰度直方图.pdf}
+		\includegraphics[scale=0.46]{normal133灰度直方图.pdf}
 		\hspace{0.3in}
-		\includegraphics[scale=0.5]{potholes1灰度直方图.pdf}
+		\includegraphics[scale=0.46]{potholes1灰度直方图.pdf}
 		\caption{灰度直方图对比}
 		\label{fig:灰度对比}
 	\end{figure}
+	观察灰度直方图的对比，我们可先发现灰度直方图中正常道路所呈现的峰值远高于坑洼道路，其中坑洼道路的峰值出现在图像两侧，而正常道路的峰值出现在图像的中心位置。此外正常道路数值波动明显大于坑洼道路。故我们认为灰度直方图所展现的数值大小、分布及波动情况可以较好体现道路的坑洼情况。
 	
 	\subsubsection{边缘、轮廓检测}
 	“normal133.jpg”及“potholes1.jpg”边缘、轮廓检测对比，如\textcolor{blue}{\cref{fig:边缘检测}}及\textcolor{blue}{\cref{fig:轮廓检测}}所示。
@@ -174,8 +182,6 @@
 		\label{fig:边缘检测}
 	\end{figure}
 	观察边缘检测的对比，我们可以发现边缘检测后正常道路色彩连续完整，而坑洼道路的坑洼部分在边缘检测后整体呈现深度黑色，与平整的砂石路面形成了强烈对比。故我们认为采用边缘检测可以较好判断道路状况。
-
-	对道路的图片进行轮廓检测后，我们可以发现检测后无坑洼道路的图片颜色相同，而对于坑洼道路，图片上有很明显的颜色差别。经过分析，我们认为不同的颜色代表了道路的平整与坑洼，进行轮廓检测后，可以通过道路颜色的异同判断道路是否坑洼。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.58]{normal133轮廓检测.pdf}
@@ -184,6 +190,7 @@
 		\caption{轮廓检测}
 		\label{fig:轮廓检测}
 	\end{figure}
+	对道路的图片进行轮廓检测后，我们可以发现检测后无坑洼道路的图片颜色相同，而对于坑洼道路，图片上有很明显的颜色差别。经过分析，我们认为不同的颜色代表了道路的平整与坑洼，进行轮廓检测后，可以通过道路颜色的异同判断道路是否坑洼。
 
 	\subsubsection{阈值分割}
 	“normal133.jpg”及“potholes1.jpg”阈值分割对比，如\textcolor{blue}{\cref{fig:阈值分割}}所示。
@@ -196,21 +203,21 @@
 		\label{fig:阈值分割}
 	\end{figure}
 	阈值分割将图片分为两类区域，对比正常道路与坑洼道路的阈值分割图，正常道路由于整个道路的状态相同，因此经阈值分割后，全部被划分为同一类，故颜色相同；而对于坑洼道路，道路中出现了与周围状态不同的区域，经过阈值分割后，呈现出不同的颜色，黑色为正常的道路，白色为道路中存在的坑洼，色彩对比强烈。
-
-	\subsection{图像文件预处理}\label{图像文件预处理}
-	该题原数据集为“data.zip”，包含301张图片，均为“jpg”格式，且在文件名中进行了标注。其中，文件名中包含“normal”字符的表示正常道路，共266张，包含“potholes”字符的为坑洼道路，共35张。考虑到数据的标注严谨性，首先对其进行人为再分类，将标注异常的进行重新标注或剔除。此外，为方便后续模型的分析、建立与求解，我们将“normal”与“potholes”图像文件置于“DATA”文件下的“normal”及“potholes”文件夹中。
-
-	考虑到图像文件较少，用于训练的特征不足，因此对原数据集进行拓充，方法为从网络上获取坑洼道路的图像。
-
-	此外，还需要预先读取测试集图像，以防破损文件影响预测过程。
-	\subsubsection{人为再分类}
-	考虑到数据的标注严谨性，我们首先对其进行人为再分类，将标注异常的进行重新标注或剔除。对于所给数据集，我们筛选出了以下几张图片，其标注存在问题，需要进行重新标注或剔除，如\textcolor{blue}{\cref{fig:异常图片}}所示，图中所标注的为该图像的原始文件名。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.8]{异常图片.pdf}
 		\caption{标注异常图片}
 		\label{fig:异常图片}
 	\end{figure}
+	\subsection{图像文件预处理}\label{图像文件预处理}
+	该题原数据集为“data.zip”，包含301张图片，均为“jpg”格式，且在文件名中进行了标注。其中，文件名中包含“normal”字符的表示正常道路，共266张，包含“potholes”字符的为坑洼道路，共35张。考虑到数据的标注严谨性，首先对其进行人为再分类，将标注异常的进行重新标注或剔除。此外，为方便后续模型的分析、建立与求解，我们将“normal”与“potholes”图像文件置于“DATA”文件下的“normal”及“potholes”文件夹中。
+
+	考虑到图像文件较少，用于训练的特征不足，因此对原数据集进行拓充，方法为从网络上获取坑洼道路的图像。
+
+	此外，还需要预先读取测试集图像，以防破损文件影响预测过程。
+
+	\subsubsection{人为再分类}
+	考虑到数据的标注严谨性，我们首先对其进行人为再分类，将标注异常的进行重新标注或剔除。对于所给数据集，我们筛选出了以下几张图片，其标注存在问题，需要进行重新标注或剔除，如\textcolor{blue}{\cref{fig:异常图片}}所示，图中所标注的为该图像的原始文件名。
 
 	对于上述“(e) normal298.jpg”文件，我们选择剔除，其余划分为“potholes”类。具体处理见\textcolor{blue}{\cref{tab:异常图片处理}}。表中“potholes”代表将该问价视为坑洼道路，而“删除”代表将该文件删除，不参与后续模型的分析、建立、训练等。
 
@@ -234,15 +241,15 @@
 	\label{tab:异常图片处理}
 \end{table}
 
-  
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.46]{图像数据观测.pdf}
+	\caption{图像数据观测}
+	\label{fig:图像数据观测}
+\end{figure}
 	\subsubsection{文件夹分类}
 	为了后续模型的分析、建立与求解，我们将“normal”与“potholes”图像文件置于“DATA”文件下的“normal”及“potholes”文件夹中，作为二分类的数据集。该处理我们使用Python的os及shutil库进行处理，首先指定根目录为“DATA”，再在其下创建“normal”与“potholes”文件夹，之后读取“DATA”文件夹下的所有文件，若文件名中含有“normal”字符，则将其放置于“normal”文件夹中，否则放置于“potholes”文件夹中。具体处理代码见\textbf{附录-C.2，Data Preprocessing [数据预处理]}。这里，我们可以大致观测数据集图像，如\textcolor{blue}{\cref{fig:图像数据观测}}所示。
-	\begin{figure}[H]
-		\centering
-		\includegraphics[scale=0.5]{图像数据观测.pdf}
-		\caption{图像数据观测}
-		\label{fig:图像数据观测}
-	\end{figure}
+
 	至此，我们已将所有数据进行了人为再分类，并将数据集分别放于“normal”及“potholes”文件夹中，方便后续的处理。
 	
 	\subsubsection{原数据集的保留与拓充}
@@ -274,14 +281,14 @@
 	YOLOv8是Ultralytics公司于2023年1月10日开源的YOLOv5的下一个重大更新版本，目前支持图像分类、物体检测、实例分割、目标追踪、姿态估计任务\textcolor{blue}{\cite{YOLO任务}}。
 
 	YOLOv8是一个SOTA模型，其建立在曾经的版本的基础上引入新的功能，并进行一定改进，从而进一步提升性能与灵活性。具体创新包\textbf{括骨干网络（Backbone Network）}、\textbf{Anchor-Free检测头（Anchor-Free Detection Head）}和\textbf{损失函数（Loss Function）}\textcolor{blue}{\cite{YOLO架构}}，模型结构如\textcolor{blue}{\cref{fig:YOLO架构}}所示\textcolor{blue}{\footnote{该架构图来源于：\url{https://mmyolo.readthedocs.io/en/latest/recommended_topics/algorithm_descriptions/yolov8_description.html}，原作者为RangeKing@github，其Github主页：\url{https://github.com/RangeKing}。}}。
+
+	YOLOv8主要可分为Input 输入端、Backbone骨干神经网络、Neck混合特征网络层和Head预测层网络4个部分\textcolor{blue}{\cite{YOLOv8简述}}。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.14]{YOLOv8架构}
 		\caption{YOLOv8模型架构}
 		\label{fig:YOLO架构}
 	\end{figure}
-	YOLOv8主要可分为Input 输入端、Backbone骨干神经网络、Neck混合特征网络层和Head预测层网络4个部分\textcolor{blue}{\cite{YOLOv8简述}}。
-	
 	\begin{itemize}
 		\item \textbf{Input}：输入端方法包含的功能模块有：\textbf{马赛克（Mosaic）数据增强}、\textbf{自适应锚框（Anchor）计算}、\textbf{自适应图片缩放}和\textbf{Mixup数据增强}\textcolor{blue}{\cite{YOLO数据增强}}。马赛克数据增强通过将4张图像进行随机的缩放、裁剪和打乱分布方式等操作来重新拼接图像，从而丰富检测的数据集。在每次训练数据之前，自适应锚框计算会选择最合适锚框尺寸，自动匹配最佳锚框，并将在目标检测中将两幅图像的像素值按图像透明度的通道信息进行线性融合。
 		\item \textbf{Backbone Network}：骨干网络用来提取图像特征，包括\textbf{注意力（Focus）机制模块}、\textbf{跨阶段局部网络（Cross Stage Partial Network, CSP）}和\textbf{空间金字塔池化（Spatial Pyramid Pooling, SPP）结构}四个模块。先将图片进行切片，再将新得到的图片经过卷积操作，生成没有信息丢失的两倍下的采样特征图。
@@ -465,7 +472,7 @@
 		\caption{guy7iodk.jpg结果展示}
 		\label{fig:guy7iodk结果展示}
 	\end{figure}
-	\subsubsection{道路坑洼的面积占比估算}
+	\subsubsection{道路坑洼的面积占比估算}\label{估算}
 	由于坑洼的形态多样，在对使用图像检测的矩形计算其面积占比时，需要考虑到以下五种基本情况，其有着不同的处理方法，以下进行具体叙述，记坑洼面积占原图像面积比值为$\eta\,\%$\textcolor{blue}{\footnote{本文计算的$\eta$均向上取整。}}。在估算面积占比之前，需要利用之前训练好的模型对未知数据集图像文件进行预测，得到坑洼的边框相对坐标信息。但由于在估算时，需要使用到绝对坐标信息，因此，我们需要对其进行转换。这里我们使用Python进行处理，具体处理代码见\textbf{附录-C.10，Coordinate Transformation [坐标转换]}。
 	\begin{itemize}
 		\item \textbf{图中无坑洼}；在模型预测时，其支持输出预测的图像中坑洼的个数，利用Python的pandas库将其进行处理，即可得到各图预测的坑洼个数。当坑洼个数为0时，面积占比为0。
@@ -564,6 +571,8 @@
 	此外，由于坑洼图像的多样、复杂，部分图片可能存在上述基本情况的综合，因此，对于每一情况，均需要特定计算，再求和，从而求得其占比。
 	
 	经过上述分析，整合如\textcolor{blue}{\cref{tab:道路坑洼面积占比估算计算数据集}}所示的数据集。表中仅罗列出了部分数据，且部分文件存在多行，这是由于其存在多个坑洼，因此，需要逐个文件进行处理。
+
+	现依据该表及上述分析对各图中坑洼占比进行计算，处理代码详见\textbf{附录-C.11，Proportional Calculation [面积占比估算]}。此外，该方法需要考虑的情况较多，且估算存在一定误差。因此，提出一种简便且准确的方法，即利用YOLOv8s-Segment模型提取的坑洼区域，进行阈值分割，像素点二值化，求目标像素点占整体像素点比值，即可较为准确地求得坑洼占比，具体见\textcolor{blue}{\nameref{改进}}。
 \begin{table}[H]
 	\centering
 	\caption{道路坑洼面积占比估算计算数据集}
@@ -587,16 +596,6 @@
 	  \end{tabular}}
 	\label{tab:道路坑洼面积占比估算计算数据集}
   \end{table}
-  现依据该表及上述分析对各图中坑洼占比进行计算，处理代码详见\textbf{附录-C.11，Proportional Calculation [面积占比估算]}。
-
-	\begin{itemize}
-		\item \textbf{读取已建立、训练完成的模型}：将上述CNN-SVM模型利用keras及pickle库读取；
-		\item \textbf{读取未知数据集}：将未知数据集的图像数据及其文件名（包括后缀名）一并读入，方便后续结果的输出，共计4942张图像；
-		\item \textbf{对未知数据集进行预处理}：为了准确预测，需要将该数据集格式转换为前期训练模型输入的格式，避免预测错误。
-		\item \textbf{对未知数据集进行预测}：首先传入CNN卷积神经网络，对数据集的特征进行提取；之后将提取的特征数据集传入SVM支持向量机中，进行预测；
-		\item \textbf{结果查看}：经过上述步骤，将文件名与预测结果一一对应转为表格数据，方便查看；通过预测，模型在4942张图像中，识别出坑洼道路为3765张，识别为正常道路为1177张。
-		\item \textbf{保存结果}：确认无误后，将上述表格输出为“test\_result.csv”文件。
-	\end{itemize}
 
 	\subsection{模型的评估}\label{模型效果分析}
 	\subsubsection{模型评估指标}
@@ -673,17 +672,18 @@
 	对于图像分割模型，绘制其Box及Mask，即该模型会对坑洼标注矩形框的同时也会标注其边缘信息，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Box}}及\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Mask}}所示。
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{Figures/segment/SegmentBox.pdf}
+		\includegraphics[scale=0.48]{Figures/segment/SegmentBox.pdf}
 		\caption{YOLOv8s-Segment Box}
 		\label{fig:YOLOv8s-Segment-Box}
 	\end{figure}
+	观察上述图示，可以发现各项指标在Box中较为优秀，而在Mask中相对较低，这是由于在标注矩形框时，仅需要坑洼的最边界信息，而无需具体到其轮廓、形态等特征。而边缘分割时，需要获取其边缘信息，需要具体到其轮廓、形态等特征，因此该任务相对于Box标注更为困难，因此其指标相对较低。
+
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{Figures/segment/SegmentMask.pdf}
+		\includegraphics[scale=0.48]{Figures/segment/SegmentMask.pdf}
 		\caption{YOLOv8s-Segment Mask}
 		\label{fig:YOLOv8s-Segment-Mask}
 	\end{figure}
-	观察上述图示，可以发现各项指标在Box中较为优秀，而在Mask中相对较低，这是由于在标注矩形框时，仅需要坑洼的最边界信息，而无需具体到其轮廓、形态等特征。而边缘分割时，需要获取其边缘信息，需要具体到其轮廓、形态等特征，因此该任务相对于Box标注更为困难，因此其指标相对较低。
 
 	同时，绘制模型的混淆矩阵热力图，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-ConfusionMatrix}}所示，采用两种计算，其一为数量统计，其二为数据标准化统计。可以发现对于坑洼的识别，其坑洼预测正确率为$0.51\,\%$，对于background并未进行训练，因此表现出的效果较差。考虑到各坑洼的轮廓、形态、所在区域的多样及复杂，其预测效果仍可以接受。但出于未来模型的改进，我们仍需要对其进行改进，以提高其预测效果，在模型的评价中，我们也将进行一定叙述。
 	\begin{figure}[H]
@@ -693,23 +693,62 @@
 		\label{fig:YOLOv8s-Segment-ConfusionMatrix}
 	\end{figure}
 	
-	此外，绘制训练过程中每一次Epoch的各项指标，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Results}}所示。观察该图，我们可以发现
+	此外，绘制训练过程中每一次Epoch的各项指标，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Results}}所示。观察该图，我们可以发现无论是训练集还是验证集的损失值随着迭代的次数的增加，其在整体上有下降趋势。但在前20轮迭代过程中，损失值大幅度上升，在此之后，平稳下降，说明模型效果在逐步上升。同时，可以发现，模型的无论是Box还是Mask的精确率、召回率、mAP50、mAP50-95在整体上均随着迭代次数的增加而上升，且在此之后仍有上升趋势。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.37]{Figures/segment/SegmentResults.png}
 		\caption{YOLOv8s-Segment Results}
 		\label{fig:YOLOv8s-Segment-Results}
 	\end{figure}
+  
 	\subsubsection{YOLOv8n-Detect}
+	对于图像检测模型，其仅有Box衡量参数方法，而无Mask方法，因此仅绘制其Box体系下的各项指标。其余分析与YOLOv8s-Segment类似，此处不再赘述，相关图示可在附录中翻阅，如\textcolor{blue}{\cref{fig:YOLOv8s-Detect-Confusion-Matrix}}至\textcolor{blue}{\cref{fig:YOLOv8s-Detect-Results}}所示。
 	
+	同时，我们可以得到上述两种模型的最终效果指标，见\textcolor{blue}{\cref{tab:YOLOv8模型指标}}。
+	
+\begin{table}[htbp]
+	\centering
+	\caption{YOLOv8s-Segment及YOLOv8n-Detect模型指标}
+	\scalebox{0.9}{
+	  \begin{tabular}{cccc}
+	  \toprule
+	  \multirow{2}[4]{*}{\textbf{衡量指标}} & \multicolumn{2}{c}{\textbf{YOLOv8s-Segment}} & \multicolumn{1}{l}{\textbf{YOLOv8n-Detect}} \\
+  \cmidrule{2-4}          & \textbf{Box} & \textbf{Mask} & \textbf{Box} \\
+	  \midrule
+	  precision & 0.90475  & 0.90475  & 0.94427  \\
+	  recall & 0.50000  & 0.45455  & 0.84615  \\
+	  mAP50 & 0.49485  & 0.43971  & 0.51992  \\
+	  mAP50-95 & 0.26490  & 0.21676  & 0.23120  \\
+	  \bottomrule
+	  \end{tabular}}
+	\label{tab:YOLOv8模型指标}
+  \end{table}
+
 	\section{模型的评价与推广}
 	\subsection{模型的评价}
 	\begin{itemize}
 		\item \textbf{模型的优点}
-
+		\begin{enumerate}
+			\item 在建立YOLOv8模型之前，首先对图像的特征进行了详细分析，为后续建模提供了有效的理论支持；
+			\item 在对图像坑洼边缘标记时，采用ISAT-SAM方法，交互式半自动标注，大大提升标注效率与准确度，为后续模型的训练提供了有效的数据支持；
+			\item 对于坑洼边缘的检测与分割，我们选用YOLOv8模型，其速度快，准确度高，效果优秀；
+			\item 建立分割与检测模型，适用于不同场景的需求；
+			\item 在图像文件预处理时，对数据进行了人为再分类，使数据更准确有效；
+			\item 在图像数据预处理时，对训练集进行高斯、双边滤波与旋转增强，提升模型的泛化能力；
+			\item 在YOLOv8训练时，采用Mosaic数据增强，增加了数据的多样性，丰富了图片的背景，同时也增加了目标个数。
+			\item 在对图像坑洼面积占比估算时，采用简单的矩形估算，使得计算较为简便，空间复杂度较低。
+		\end{enumerate}
 		\item \textbf{模型的缺点}
-
-		\item \textbf{模型的改进}
+		\begin{enumerate}
+			\item 在对训练集进行数据增强时，方法可能并不是最佳的，因此在对特征进行学习时可能会有所遗漏；
+			\item 在计算坑洼面积占比时采用矩形方框估算，准确性相对较低，可能不适用于精度较高的场景。
+			\item 由于计算机设备受限，并未选用能力更强的YOLOv8的m、l、x模型。
+		\end{enumerate}
+		\item \textbf{模型的改进}\label{改进}
+		\begin{enumerate}
+			\item 在进行预测时，可以结合优化算法及修改YOLO架构，以提高预测精度。如分布偏移卷积（DSconv）\textcolor{blue}{\cite{Dsconv}}、Gather-and-Distribute（GD）机制\textcolor{blue}{\cite{Gold-YOLO}}等方法，提高多尺度特征融合能力，并在模型尺度上实现延迟和精度之间的理想平衡。
+			\item 在计算坑洼面积时可用多边形估算替代矩形估算，使准确性提高，但计算复杂度也会相应提高。此外还可通过标记的图像进行阈值分割，将红色部分（标记为坑洼的）记为1，否则记为0，从而计算0与1的像素点个数，再通过像素点个数计算坑洼面积占比\textcolor{blue}{\cite{改进}}。具体解决方案见\textbf{附录-C.13，Proportional Calculation [面积占比估算（像素点法）]}。
+		\end{enumerate}
 
 	\end{itemize}
 	\subsection{模型的推广}
@@ -741,11 +780,15 @@
 
 	\bibitem{模型评测}知乎.模型评测:PRECISION、RECALL、F1-score[EB/OL].\url{https://zhuanlan.zhihu.com/p/519982682}.
 
-
 	\bibitem{Yellowbrick}Yellowbrick.Precision-Recall Curves - Yellowbrick v1.5 documentation[EB/OL].\url{https://www.scikit-yb.org/en/latest/api/classifier/prcurve.html}.
 
 	\bibitem{指标}CSDN.目标检测评估指标mAP：从Precision,Recall,到AP50-95【未完待续】[EB/OL].\url{https://blog.csdn.net/Albert233333/article/details/132752216}.
 
+	\bibitem{Dsconv}Nascimento M G, Fawcett R, Prisacariu V A. Dsconv: Efficient convolution operator[C]//Proceedings of the IEEE/CVF International Conference on Computer Vision. 2019: 5148-5157.
+
+	\bibitem{Gold-YOLO}Wang C, He W, Nie Y, et al. Gold-YOLO: Efficient Object Detector via Gather-and-Distribute Mechanism[J]. arXiv preprint arXiv:2309.11331, 2023.
+
+	\bibitem{改进}CSDN.利用目标检测分割图进行目标占比计算[EB/OL].\url{https://blog.csdn.net/zhn3648/article/details/127458929}.
 	\end{thebibliography}
 	\end{spacing}
 	\newpage
@@ -770,7 +813,7 @@
 	\noindent{\heiti [A]支撑文件列表}
 	~\\
 
-	支撑文件列表如下（列表中不包含原始数据集）：
+	支撑文件列表如下（列表中不包含原始数据集及测试数据集）：
 	% Table generated by Excel2LaTeX from sheet 'Sheet2'
 	\begin{table}[H]
 		\centering
@@ -823,25 +866,23 @@
 	\scalebox{0.9}{
 	  \begin{tabular}{cc||cc}
 	  \toprule
-	  \textbf{库}     & \textbf{版本}    & \textbf{库}     & \textbf{版本} \\
+	  \textbf{库} & \textbf{版本} & \textbf{库} & \textbf{版本} \\
 	  \midrule
-	  collections & 内置库   & jupyterlab-widgets & 3.0.9 \\
-	  opencv-python & 4.8.1.78 & keras & 2.14.0 \\
-	  h5py  & 3.10.0 & matplotlib & 3.8.0 \\
-	  jupyter & 1.0.0 & numpy & 1.26.1 \\
-	  jupyter\_client & 8.5.0 & os    & 内置库 \\
-	  jupyter-console & 6.6.3 & pandas & 2.1.2 \\
-	  jupyter\_core & 5.4.0 & pickle & 内置库 \\
-	  jupyter-events & 0.8.0 & random & 内置库 \\
-	  jupyter-lsp & 2.2.0 & shutil & 内置库 \\
-	  jupyter\_server & 2.9.1 & sklearn & 1.3.2 \\
-	  jupyter\_server\_terminals & 0.4.4 & tensorflow & 2.14.0 \\
-	  jupyterlab & 4.0.7 & warnings & 内置库 \\
-	  jupyterlab-pygments & 0.2.2 & yellowbrick & 1.50  \\
-	  jupyterlab\_server & 2.25.0 &       &  \\
+	  jupyter & 1.0.0 & jupyter-lsp & 2.2.0 \\
+	  jupyter\_client & 8.5.0 & matplotlib & 3.8.0 \\
+	  jupyter\_core & 5.4.0 & numpy & 1.22.4+mkl \\
+	  jupyter\_server & 2.9.1 & opencv-python & 4.8.1.78 \\
+	  jupyter\_server\_terminals & 0.4.4 & os    & 内置库 \\
+	  jupyter-console & 6.6.3 & pandas & 2.0.3 \\
+	  jupyter-events & 0.8.0 & scikit-learn & 1.3.0 \\
+	  jupyterlab & 4.0.7 & shutil & 内置库 \\
+	  jupyterlab\_server & 2.25.0 & torch & 1.11.0 \\
+	  jupyterlab-pygments & 0.2.2 & tqdm  & 4.64.0 \\
+	  jupyterlab-widgets & 3.0.9 & ultralytics & 8.0.206 \\
 	  \bottomrule
 	  \end{tabular}}
-\end{table}
+  \end{table}
+  
 
 \newpage
 % \phantomsection
@@ -1492,7 +1533,7 @@ for i in folderlist:
                 x[4]) + '\n')
 \end{python}
 
-\textbf{C.11 Proportional Calculation [面积占比估算]}
+\textbf{C.11 Proportional Calculation [面积占比估算（坐标法）]}
 \begin{python}
 #!/usr/bin/env python
 # coding: utf-8
@@ -1739,6 +1780,45 @@ DetectTrue / (DetectFalse + DetectTrue)
 SegmentTrue / (SegmentFalse + SegmentTrue)
 \end{python}
 
+\textbf{C.13 Proportional Calculation [面积占比估算（像素点法）]}
+\begin{python}
+import os
+from PIL import Image
+import numpy as np
+ 
+path = './image/'    # 图片路径
+dataname = 'data.txt'   # 存放计算结果
+red_data = 'red.txt'    # 存放红色像素数量
+black_data = 'black.txt'   # 存放黑色像素数量
+ 
+files = os.listdir(path)    # 读取图片文件夹
+for file in files:
+     img = Image.open(path+file)    # 读取图片
+     img_array = np.array(img)       # 将图片转换成二进制数组
+     shape = img_array.shape        # 得到数组尺寸大小
+
+ 
+     black = 0
+     red = 0
+     for i in range(0,shape[0]):      # 遍历图片像素
+          for j in range(0,shape[1]):
+               value = img_array[ i , j ]     # 得到像素每一点的值
+               if value == 0:               # 图片为二值化图片，黑色为0，红色为1
+                     black += 1   # 黑色像素数量
+               if value == 1: 
+                     red += 1    # 红色像素数量
+
+     per_image = red/(black+red)    # 红色像素占整张图像素比例
+     print(per_image)
+
+     with open (dataname,'a') as f:      # 将结果写入txt文档
+             f.write(str(per_image)+"\n")
+     with open (red_data ,'a') as f:
+             f.write(str(red)+"\n")
+     with open (black_data ,'a') as f:
+             f.write(str(black)+"\n")
+\end{python}
+
 \newpage
 % \phantomsection
 % \addcontentsline{toc}{subsection}{[D]问题解决源程序}
@@ -1835,5 +1915,23 @@ head:
 	\includegraphics[width=0.8\textwidth]{Figures/detect/附Detect训练.pdf}
 	\caption{附Detect训练}
 	\label{fig:附Detect训练}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.66]{Figures/detect/DetectConfusionMatrix.pdf}
+	\caption{YOLOv8s-Detect Confusion Matrix}
+	\label{fig:YOLOv8s-Detect-Confusion-Matrix}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.48]{Figures/detect/Detect.pdf}
+	\caption{YOLOv8n-Detect Box}
+	\label{fig:YOLOv8n-Detect-Box}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Figures/detect/DetectResults.png}
+	\caption{YOLOv8s-Detect Results}
+	\label{fig:YOLOv8s-Detect-Results}
 \end{figure}
 \end{document}
