@@ -59,7 +59,7 @@
 \phantom{1}\hfill{\zihao{4}\@timu}\hfill\phantom{1}\\
 \phantom{1}\hfill{\label{zy}{\heiti 摘\hspace{2pc}要}}\hfill\phantom{1}\pdfbookmark[1]{摘要}{zy}\par%
 }
-{\\\phantom{1}\\{\heiti 关键词}：\@keyword\thispagestyle{empty}\setcounter{page}{-1}
+{\\\phantom{1}\\{\heiti 关键词}：\@keyword\thispagestyle{empty}\setcounter{page}{-2}
 \newpage\thispagestyle{empty}
 }
 

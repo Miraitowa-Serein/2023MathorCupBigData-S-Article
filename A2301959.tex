@@ -264,10 +264,10 @@
 		  \end{tabular}}
 		\label{tab:数据来源}
 	  \end{table}
-	\subsubsection{测试集数据预读取}
-	此外，还需要预先读取测试集图像，以防破损文件影响预测过程。这里我们使用ultralytics库，并加上try-except异常处理，将数据加载至内存中，方便后续进行预测。
+	\subsubsection{测试集数据预读取}\label{预读取}
+	此外，还需要预先读取测试集图像，以防破损文件影响预测过程。这里我们使用try-except异常处理方法，测试文件是否能够正常读取，方便后续进行预测。
 	
-	经过读取，发现存在一个文件读取失败，为“guy7iodk.jpg”。因此，对于该张图片，我们对其进行单一读取、处理。而其余的4941张图正常读取，在后续可正常预测。
+	经过测试，发现存在一个文件读取失败，为“guy7iodk.jpg”。因此，对于该张图片，我们对其进行人为处理，再重新读取。具体方法见\textcolor{blue}{\nameref{预测}}。
 	
 	\subsection{YOLOv8模型简述}
 
@@ -448,8 +448,23 @@
 
 		训练过程的每一次迭代的结果保存于“支撑材料/process/训练”文件夹中。训练结束后，会生成“best.pt”与“last.pt”模型文件，我们选择“best.pt”作为后续预测的图像检测模型。而对于模型的效果分析，详见\textcolor{blue}{\nameref{模型效果分析}}。
 	\end{itemize}
-	\subsection{测试集图像坑洼特性预测}
+	\subsection{测试集图像坑洼特性预测}\label{预测}
+	在对测试集图像坑洼特性预测前，首先要判断各图像文件是否能够读取，在\textcolor{blue}{\nameref{预读取}}中，经测试有一文件读取失败，读入的数组为空，将会导致后续批量预测的中断。这里我们考虑到，在系统中能够正常打开，而利用opencv或pillow库均打开失败。因此，我们考虑尝试重新另存为该张图片为JPG格式文件，再重新读取。经过测试，通过上述操作后，文件能够正常读取，且信息正确。至此4942张图片均能正常读取，方便后续批量、统一预测。
 	\subsubsection{道路坑洼的边缘提取}
+	利用上述训练好的模型，可以对未知数据集进行批量预测，提取其坑洼的边缘，现随机挑选一张图片，文件名为“em5acvux.jpg”，结果见\textcolor{blue}{\cref{fig:效果展示}}。可以发现，无论是图像分割还是图像检测，其均能较好地提取出坑洼的边缘信息，但图像分割的效果更好，其能够更好地提取出坑洼的边缘，且能够将坑洼的形态进行较好的还原。
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{效果展示.pdf}
+		\caption{效果展示}
+		\label{fig:效果展示}
+	\end{figure}
+	对于上述起初读取失败的“guy7iodk.jpg”文件，这里我们也将结果展示，如\textcolor{blue}{\cref{fig:guy7iodk结果展示}}所示。观察该图，我们可以发现，YOLOv8s-Segment模型能够较好地提取出坑洼的边缘，但YOLOv8n-Detect模型提取的坑洼边缘信息不够完整，且存在一定的误差。
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{guy7iodk结果展示.pdf}
+		\caption{guy7iodk.jpg结果展示}
+		\label{fig:guy7iodk结果展示}
+	\end{figure}
 	\subsubsection{道路坑洼的面积占比估算}
 	由于坑洼的形态多样，在对使用图像检测的矩形计算其面积占比时，需要考虑到以下五种基本情况，其有着不同的处理方法，以下进行具体叙述，记坑洼面积占原图像面积比值为$\eta\,\%$\textcolor{blue}{\footnote{本文计算的$\eta$均向上取整。}}。在估算面积占比之前，需要利用之前训练好的模型对未知数据集图像文件进行预测，得到坑洼的边框相对坐标信息。但由于在估算时，需要使用到绝对坐标信息，因此，我们需要对其进行转换。这里我们使用Python进行处理，具体处理代码见\textbf{附录-C.10，Coordinate Transformation [坐标转换]}。
 	\begin{itemize}
@@ -546,7 +561,43 @@
 		\end{itemize}
 	\end{itemize}
 
-	此外，由于坑洼图像的多样、复杂，部分图片可能存在上述基本情况的综合，因此，对于每一情况，均需要特定计算，再求和，从而求得其占比。处理代码详见\textbf{附录-C.11，Proportional Calculation [面积占比估算]}。
+	此外，由于坑洼图像的多样、复杂，部分图片可能存在上述基本情况的综合，因此，对于每一情况，均需要特定计算，再求和，从而求得其占比。
+	
+	经过上述分析，整合如\textcolor{blue}{\cref{tab:道路坑洼面积占比估算计算数据集}}所示的数据集。表中仅罗列出了部分数据，且部分文件存在多行，这是由于其存在多个坑洼，因此，需要逐个文件进行处理。
+\begin{table}[H]
+	\centering
+	\caption{道路坑洼面积占比估算计算数据集}
+	\scalebox{0.7}{
+	  \begin{tabular}{rrrrrrrrrr}
+	  \toprule
+	  \textbf{索引} & \textbf{fnames} & \textbf{置信度} & $x_1$ & $y_1$ & $x_2$ & $y_2$ & \textbf{Npotholes} & \textbf{height} & \textbf{width} \\
+	  \midrule
+	  0     & 00c9sdfq.jpg & 0.783255  & 54.144627  & 119.418549  & 127.293488  & 149.223495  & 2     & 259   & 194 \\
+	  1     & 00c9sdfq.jpg & 0.727551  & 86.166367  & 92.886162  & 143.883499  & 117.423920  & 2     & 259   & 194 \\
+	  2     & 00yf8rxj.jpg & 0.685144  & 0.000000  & 268.575745  & 714.198425  & 439.384949  & 1     & 450   & 800 \\
+	  3     & 01lx7dej.jpg & 0.345122  & 723.983704  & 628.620300  & 1671.653564  & 1621.744507  & 1     & 3264  & 2448 \\
+	  4     & 01paoyy0.jpg & 0.447922  & 62.188206  & 54.767998  & 338.213837  & 239.532608  & 1     & 300   & 447 \\
+	  …     & …     & …     & …     & …     & …     & …     & …     & …     & … \\
+	  6506  & zynixpux.jpg & 0.266729  & 55.626934  & 116.560684  & 126.989532  & 136.572723  & 3     & 300   & 481 \\
+	  6507  & zyylqfs0.jpg & 0.829763  & 645.354004  & 481.915741  & 1075.006836  & 717.232178  & 1     & 816   & 1200 \\
+	  6508  & zzhe6767.jpg & NaN   & NaN   & NaN   & NaN   & NaN   & 0     & 555   & 986 \\
+	  6509  & zzipq9zn.jpg & NaN   & NaN   & NaN   & NaN   & NaN   & 0     & 300   & 463 \\
+	  6510  & zzvomOax.jpg & 0.711966  & 0.000822  & 369.854126  & 1447.335327  & 984.154907  & 1     & 1080  & 1623 \\
+	  \bottomrule
+	  \end{tabular}}
+	\label{tab:道路坑洼面积占比估算计算数据集}
+  \end{table}
+  现依据该表及上述分析对各图中坑洼占比进行计算，处理代码详见\textbf{附录-C.11，Proportional Calculation [面积占比估算]}。
+
+	\begin{itemize}
+		\item \textbf{读取已建立、训练完成的模型}：将上述CNN-SVM模型利用keras及pickle库读取；
+		\item \textbf{读取未知数据集}：将未知数据集的图像数据及其文件名（包括后缀名）一并读入，方便后续结果的输出，共计4942张图像；
+		\item \textbf{对未知数据集进行预处理}：为了准确预测，需要将该数据集格式转换为前期训练模型输入的格式，避免预测错误。
+		\item \textbf{对未知数据集进行预测}：首先传入CNN卷积神经网络，对数据集的特征进行提取；之后将提取的特征数据集传入SVM支持向量机中，进行预测；
+		\item \textbf{结果查看}：经过上述步骤，将文件名与预测结果一一对应转为表格数据，方便查看；通过预测，模型在4942张图像中，识别出坑洼道路为3765张，识别为正常道路为1177张。
+		\item \textbf{保存结果}：确认无误后，将上述表格输出为“test\_result.csv”文件。
+	\end{itemize}
+
 	\subsection{模型的评估}\label{模型效果分析}
 	\subsubsection{模型评估指标}
 	为更好地评估模型，我们针对上述模型进行多维度评估，这里我们用到的有：
@@ -601,8 +652,25 @@
 
 		\item \textbf{混淆矩阵（Confusion Matrix）}：矩阵每一行表示样本标签的实际类别，在本题中表示道路类型：为正常还是坑洼的实际标签；每一列表示样本标签的预测类别，在本题中表示道路类型：为正常还是坑洼的预测标签。因此该图示的主对角线数据之和即为模型预测准确的样本数。这里此外还需要引入四项值，而混淆矩阵可以直观地观察到预测准确与错误的情况，以及模型对于每一类别的区分程度。
 		\item \textbf{精确率-召回率曲线（Precision-Recall Curve，PR-Curve）}：该图像可表现出分类的预测精度与召回率之间的关系\textcolor{blue}{\cite{Yellowbrick}}。图像的填充区域越大，分类效果越优。
+		\item \textbf{mAP}：其中AP是某一类别的精确率-召回率
+		曲线（PR-Curve）下的面积，而mAP则是计算所有类别的PR曲
+		线下面积的平均值，即：
+		\begin{equation}
+			\mathrm{AP}=\sum\limits_{i=1}^n\left(\mathrm{R}_i-\mathrm{R}_{i-1}\right)\mathrm{P}_i
+		\end{equation}
+		\begin{equation}\label{mAP}
+			\mathrm{mAP}=\frac{1}{Q}\sum\limits_{q=1}^Q\mathrm{AP}\left(q\right)
+		\end{equation}
+		在本题中，由于我们只研究道路坑洼，因此mAP与AP是相等的，即\textcolor{blue}{\eqref{mAP}}中$Q=1$。
+		\item \textbf{mAP50}：$50$表示目标的交集与并集之比IoU（Intersection over Union）阈值为$50$，即当预测框与真实框的IoU大于$50\%$时，该预测框为正确预测框。若记真实区域为$A$，预测区域为$B$，则IoU为：
+		\begin{equation}
+			\mathrm{IoU}=\frac{A\cap B}{A\cup B}
+		\end{equation}
+		\item \textbf{mAP50-95}：$50-95$表示mAP阈值为50到mAP阈值为95，间隔5，取得10个mAP值，再对这十个值取平均\textcolor{blue}{\cite{指标}}。
+		\item \textbf{epoch过程中各项指标变化图}：该图可直观地观察到模型在训练过程中各项指标的变化情况，从而判断模型是否收敛，以及模型的收敛速度。
 	\end{itemize}
 	\subsubsection{YOLOv8s-Segment}
+	对于图像分割模型，绘制其Box及Mask，即该模型会对坑洼标注矩形框的同时也会标注其边缘信息，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Box}}及\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Mask}}所示。
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.5]{Figures/segment/SegmentBox.pdf}
@@ -615,12 +683,17 @@
 		\caption{YOLOv8s-Segment Mask}
 		\label{fig:YOLOv8s-Segment-Mask}
 	\end{figure}
+	观察上述图示，可以发现各项指标在Box中较为优秀，而在Mask中相对较低，这是由于在标注矩形框时，仅需要坑洼的最边界信息，而无需具体到其轮廓、形态等特征。而边缘分割时，需要获取其边缘信息，需要具体到其轮廓、形态等特征，因此该任务相对于Box标注更为困难，因此其指标相对较低。
+
+	同时，绘制模型的混淆矩阵热力图，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-ConfusionMatrix}}所示，采用两种计算，其一为数量统计，其二为数据标准化统计。可以发现对于坑洼的识别，其坑洼预测正确率为$0.51\,\%$，对于background并未进行训练，因此表现出的效果较差。考虑到各坑洼的轮廓、形态、所在区域的多样及复杂，其预测效果仍可以接受。但出于未来模型的改进，我们仍需要对其进行改进，以提高其预测效果，在模型的评价中，我们也将进行一定叙述。
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{Figures/segment/SegmentConfusionMatrix.pdf}
+		\includegraphics[scale=0.66]{Figures/segment/SegmentConfusionMatrix.pdf}
 		\caption{YOLOv8s-Segment Confusion Matrix}
 		\label{fig:YOLOv8s-Segment-ConfusionMatrix}
 	\end{figure}
+	
+	此外，绘制训练过程中每一次Epoch的各项指标，如\textcolor{blue}{\cref{fig:YOLOv8s-Segment-Results}}所示。观察该图，我们可以发现
 	\begin{figure}[H]
 		\centering
 		\includegraphics[scale=0.37]{Figures/segment/SegmentResults.png}
@@ -628,17 +701,7 @@
 		\label{fig:YOLOv8s-Segment-Results}
 	\end{figure}
 	\subsubsection{YOLOv8n-Detect}
-
-	\subsection{未知数据集的预测}
-	对于该问题，具体处理代码见\textbf{附录-C.7，Predict [预测]}。我们按以下步骤进行处理：
-	\begin{itemize}
-		\item \textbf{读取已建立、训练完成的CNN-SVM模型}：将上述CNN-SVM模型利用keras及pickle库读取；
-		\item \textbf{读取未知数据集}：将未知数据集的图像数据及其文件名（包括后缀名）一并读入，方便后续结果的输出，共计4942张图像；
-		\item \textbf{对未知数据集进行预处理}：为了准确预测，需要将该数据集格式转换为前期训练模型输入的格式，避免预测错误。
-		\item \textbf{对未知数据集进行预测}：首先传入CNN卷积神经网络，对数据集的特征进行提取；之后将提取的特征数据集传入SVM支持向量机中，进行预测；
-		\item \textbf{结果查看}：经过上述步骤，将文件名与预测结果一一对应转为表格数据，方便查看；通过预测，模型在4942张图像中，识别出坑洼道路为3765张，识别为正常道路为1177张。
-		\item \textbf{保存结果}：确认无误后，将上述表格输出为“test\_result.csv”文件。
-	\end{itemize}
+	
 	\section{模型的评价与推广}
 	\subsection{模型的评价}
 	\begin{itemize}
@@ -650,7 +713,8 @@
 
 	\end{itemize}
 	\subsection{模型的推广}
-	此模型具备处理具有复杂特征图像的能力，且能够较好地进行分类，因此除了判别道路坑洼与否外，我们也可将此其应用于重大基础设施建设前的勘探过程中，对工程建设地区的形进行判别，准确且快速地确定该地区是否适合建设该工程。以此类推，除了工程方面，此模型还可应用于交通预警，此模型适用于各地交管局及城市建设市政管理部门。在一定程度上改善了当前的预警机制，为减少民众财产损失做出了贡献。
+	此模型具备分析及处理有明显特征的复杂图像的能力，因此除了估算坑洼占比，为道路避障和道路修复等工作提供便利外，我们也可以将其应用于人工智能驾驶的智能避障层面，以提供给乘客更加舒适的乘坐体验，同时也减少了坑洼可能对车辆造成的损坏，降低企业的车辆维护成本。以此类推，除了人工智能驾驶层面，此模型还可应用于环境保护，通过对坑洼面积占比的估算，帮助相关专家及工作人员了解地形地貌对于生态环境的影响，为环境保护工作提供一定的数据支持。
+
 	\newpage
 	
 	\phantomsection
@@ -679,6 +743,8 @@
 
 
 	\bibitem{Yellowbrick}Yellowbrick.Precision-Recall Curves - Yellowbrick v1.5 documentation[EB/OL].\url{https://www.scikit-yb.org/en/latest/api/classifier/prcurve.html}.
+
+	\bibitem{指标}CSDN.目标检测评估指标mAP：从Precision,Recall,到AP50-95【未完待续】[EB/OL].\url{https://blog.csdn.net/Albert233333/article/details/132752216}.
 
 	\end{thebibliography}
 	\end{spacing}
